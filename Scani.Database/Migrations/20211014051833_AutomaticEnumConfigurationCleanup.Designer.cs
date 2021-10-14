@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Scani.Database;
 
@@ -10,9 +11,10 @@ using Scani.Database;
 namespace Scani.Database.Migrations
 {
     [DbContext(typeof(ScaniContext))]
-    partial class ScaniContextModelSnapshot : ModelSnapshot
+    [Migration("20211014051833_AutomaticEnumConfigurationCleanup")]
+    partial class AutomaticEnumConfigurationCleanup
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.0-rc.2.21480.5");

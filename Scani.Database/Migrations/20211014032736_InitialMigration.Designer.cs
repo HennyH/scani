@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Scani.Database;
 
@@ -10,9 +11,10 @@ using Scani.Database;
 namespace Scani.Database.Migrations
 {
     [DbContext(typeof(ScaniContext))]
-    partial class ScaniContextModelSnapshot : ModelSnapshot
+    [Migration("20211014032736_InitialMigration")]
+    partial class InitialMigration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.0-rc.2.21480.5");
@@ -329,9 +331,9 @@ namespace Scani.Database.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("Scani.Database.Entities.UserRoleEnum", b =>
+            modelBuilder.Entity("Scani.Database.Entities.UserRole", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("UserRoleId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
@@ -346,7 +348,7 @@ namespace Scani.Database.Migrations
                     b.Property<int>("Ordinal")
                         .HasColumnType("INTEGER");
 
-                    b.HasKey("Id");
+                    b.HasKey("UserRoleId");
 
                     b.HasIndex("Description")
                         .IsUnique();
@@ -357,23 +359,7 @@ namespace Scani.Database.Migrations
                     b.HasIndex("Ordinal")
                         .IsUnique();
 
-                    b.ToTable("UserRoleEnum", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Description = "student",
-                            Name = "Student",
-                            Ordinal = 1
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Description = "teacher",
-                            Name = "Teacher",
-                            Ordinal = 2
-                        });
+                    b.ToTable("UserRoles");
                 });
 
             modelBuilder.Entity("Scani.Database.Entities.ClassStudent", b =>
@@ -531,15 +517,15 @@ namespace Scani.Database.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Scani.Database.Entities.UserRoleEnum", "UserRole")
+                    b.HasOne("Scani.Database.Entities.UserRole", "Role")
                         .WithMany()
                         .HasForeignKey("UserRoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("ScanCode");
+                    b.Navigation("Role");
 
-                    b.Navigation("UserRole");
+                    b.Navigation("ScanCode");
                 });
 
             modelBuilder.Entity("Scani.Database.Entities.Class", b =>

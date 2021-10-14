@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Scani.Database;
 
@@ -10,9 +11,10 @@ using Scani.Database;
 namespace Scani.Database.Migrations
 {
     [DbContext(typeof(ScaniContext))]
-    partial class ScaniContextModelSnapshot : ModelSnapshot
+    [Migration("20211014051454_FixAutomaticEnumConfiguration")]
+    partial class FixAutomaticEnumConfiguration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.0-rc.2.21480.5");
@@ -306,6 +308,9 @@ namespace Scani.Database.Migrations
                         .IsRequired()
                         .HasColumnType("BLOB");
 
+                    b.Property<int?>("RoleId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<byte[]>("SaltBytes")
                         .IsRequired()
                         .HasColumnType("BLOB");
@@ -322,9 +327,9 @@ namespace Scani.Database.Migrations
 
                     b.HasKey("UserId");
 
-                    b.HasIndex("ScanCodeId");
+                    b.HasIndex("RoleId");
 
-                    b.HasIndex("UserRoleId");
+                    b.HasIndex("ScanCodeId");
 
                     b.ToTable("Users");
                 });
@@ -525,21 +530,19 @@ namespace Scani.Database.Migrations
 
             modelBuilder.Entity("Scani.Database.Entities.User", b =>
                 {
+                    b.HasOne("Scani.Database.Entities.UserRoleEnum", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId");
+
                     b.HasOne("Scani.Database.Entities.ScanCode", "ScanCode")
                         .WithMany()
                         .HasForeignKey("ScanCodeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Scani.Database.Entities.UserRoleEnum", "UserRole")
-                        .WithMany()
-                        .HasForeignKey("UserRoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Navigation("Role");
 
                     b.Navigation("ScanCode");
-
-                    b.Navigation("UserRole");
                 });
 
             modelBuilder.Entity("Scani.Database.Entities.Class", b =>
