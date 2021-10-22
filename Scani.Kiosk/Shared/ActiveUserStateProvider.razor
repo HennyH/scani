@@ -1,0 +1,29 @@
+﻿@implements IDisposable
+@inject ActiveUserService _activeUserService;
+
+<CascadingValue Value="@_activeUserState">
+    @ChildContent
+</CascadingValue>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private ActiveUserState _activeUserState = null!;
+
+    protected override void OnInitialized()
+    {
+        _activeUserState = _activeUserService.ActiveUserState;
+        _activeUserService.ActiveUserChanged += OnActiveUserChanged;
+    }
+
+    private void OnActiveUserChanged(ActiveUserState newUserState)
+    {
+        _activeUserState = newUserState;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _activeUserService.ActiveUserChanged -= OnActiveUserChanged;
+    }
+}

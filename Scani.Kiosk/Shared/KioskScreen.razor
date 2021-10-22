@@ -1,0 +1,72 @@
+﻿@inject IKioskBackend KioskBackend
+@inject ActiveUserService ActiveUserService
+@inject NavigationManager NavigationManager
+
+<div>
+    <header>
+        <h1>@Title</h1>
+        @if (ActiveUserState.UserInfo != null)
+        {
+            <p>Welcome @ActiveUserState.UserInfo.DisplayName</p>
+        }
+        else
+        {
+            <p>Welcome Anon!</p>
+        }
+    </header>
+    <main>
+        @if (ActiveUserState.HasActiveUser)
+        {
+            @Screen
+        }
+        else
+        {
+            <KeySequenceReader OnKeySequenceEntered="@(keys => TryLoginWithScancode(string.Join("", keys)))" />
+            <form @onsubmit="@HandleLogin">
+                <input type="text" @bind-value="@_scancode" />
+                <input type="submit" />
+            </form>
+            @if (_loginErrorMessage != null)
+            {
+                <p>@_loginErrorMessage</p>
+            }
+        }
+    </main>
+    <footer>
+        @if (ActiveUserState.HasActiveUser)
+        {
+            <button disabled="@(!ActiveUserState.HasActiveUser)" @onclick="@HandleExitClicked">Exit</button>
+            @Footer   
+        }
+    </footer>
+</div>
+
+
+@code {
+    [Parameter] public string Title { get; set; } = "Kiosk";
+    [Parameter] public RenderFragment? Footer { get; set; }
+    [Parameter] public RenderFragment? Screen { get; set; }
+    [CascadingParameter] public ActiveUserState ActiveUserState { get; set; } = null!;
+    private string _scancode { get; set; } = string.Empty;
+    private string? _loginErrorMessage { get; set; } = null;
+
+    private async Task HandleLogin()
+    {
+        await TryLoginWithScancode(_scancode);
+    }
+
+    private async Task TryLoginWithScancode(string scancode)
+    {
+        var user = await KioskBackend.GetUserByScancodeAsync(_scancode);
+        _loginErrorMessage = user == null
+            ? "User not found"
+            : null;
+        if (user != null) ActiveUserService.SetActiveUser(user);
+        NavigationManager.NavigateTo("/checkout");
+    }
+
+    private void HandleExitClicked()
+    {
+        ActiveUserService.LogoutActiveUser();
+    }
+}
