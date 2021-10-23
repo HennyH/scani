@@ -1,0 +1,15 @@
+﻿.footer {
+    height: 100%;
+    display: grid;
+    grid-template-columns: max-content max-content;
+    justify-content: space-between;
+    padding: 1em;
+}
+
+::deep button {
+    display: flex;
+    align-content: center;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1em;
+}

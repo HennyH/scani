@@ -1,0 +1,13 @@
+﻿.equipment-card {
+    display: grid;
+    grid-template-columns: 50px 1fr max-content;
+    background-color: lightsteelblue;
+    padding: 0.5em;
+    border-radius: 5px;
+    align-items: center;
+}
+
+.name {
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}

@@ -1,13 +1,67 @@
 ﻿@page "/checkout"
+@inject IKioskBackend KioskBackend
+@inject NavigationManager NavigationManager
 
 <PageTitle>Kiosk - Checkout</PageTitle>
 
 <KioskScreen>
     <Screen>
-        <h1>Checkout Items</h1>
-        <EquipmentCheckoutMenu />
+        <EquipmentCheckoutMenu OnCartChanged="HandleCartChanged" />
     </Screen>
     <Footer>
-        <button>Checkout Items</button>
+        <div class="footer">
+            <LogoutButton />
+            <button disabled="@(_cart == null || _cart.IsEmpty)" @onclick="HandleCheckout">
+                @if (!(_cart == null || _cart.IsEmpty))
+                {
+                    <img src="/assets/images/tickets.svg" style="height: 60px" />
+                }
+                @_checkoutButtonText
+            </button>
+        </div>
     </Footer>
 </KioskScreen>
+
+@code {
+    [CascadingParameter] ActiveUserState ActiveUserState { get; set; } = null!;
+    private const string DEFAULT_CHECKOUT_BTN_TEXT = "Checkout Items";
+    private EquipmentCheckoutCart? _cart;
+    private string _checkoutButtonText = DEFAULT_CHECKOUT_BTN_TEXT;
+
+    protected void HandleCartChanged(EquipmentCheckoutCart cart)
+    {
+        _cart = cart;
+
+        var sb = new StringBuilder();
+        if (_cart.IsEmpty)
+        {
+            sb.Append(DEFAULT_CHECKOUT_BTN_TEXT);
+        }
+        else
+        {
+            if (_cart.RequestedEquipment.Any())
+            {
+                sb.Append($"Checkout {_cart.RequestedEquipment.Count()} items");
+                if (_cart.ReturnedEquipment.Any())
+                {
+                    sb.Append(", ");
+                }
+            }
+            if (_cart.ReturnedEquipment.Any())
+            {
+                sb.Append($"Return {_cart.ReturnedEquipment.Count()} items");
+            }
+        }
+        _checkoutButtonText = sb.ToString();
+    }
+
+    protected async Task HandleCheckout()
+    {
+        if (_cart == null) return;
+        if (!ActiveUserState.HasActiveUser || ActiveUserState.UserInfo == null) return;
+
+        await KioskBackend.MarkLoanedEquipmentAsReturnedByUserAsync(ActiveUserState.UserInfo.Id, _cart.ReturnedEquipmentIds);
+        await KioskBackend.CheckoutEquipmentAsUserAsync(ActiveUserState.UserInfo.Id, _cart.RequestedEquipmentIds);
+        NavigationManager.NavigateTo("/");
+    }
+}

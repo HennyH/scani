@@ -1,0 +1,33 @@
+﻿#kiosk-screen {
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(100px, min-content) 1fr minmax(100px, min-content);
+}
+
+header {
+    background-color: lightblue;
+    border: 1px solid black;
+    display: grid;
+    justify-items: center;
+    align-items: center;
+    grid-template-columns: 1fr;
+}
+
+header h1 {
+    margin-top: 0.5rem
+}
+
+.name {
+    font-weight: bold;
+    font-size: 1.5em;
+}
+
+main {
+    overflow-y: scroll;
+}
+
+footer {
+    background-color: lightgray;
+    border: 1px solid black;
+}

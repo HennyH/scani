@@ -12,8 +12,4 @@
     <ProjectReference Include="..\Scani.SnipeIT\Scani.SnipeIT.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Pages\Checkout\" />
-  </ItemGroup>
-
 </Project>

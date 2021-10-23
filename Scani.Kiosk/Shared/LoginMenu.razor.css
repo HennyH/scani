@@ -1,0 +1,12 @@
+﻿form {
+    display: grid;
+    grid-template-columns: max-content;
+    align-content: center;
+    justify-content: space-around;
+    gap: 1em;
+    height: 100%;
+}
+
+::deep img {
+    justify-self: center;
+}

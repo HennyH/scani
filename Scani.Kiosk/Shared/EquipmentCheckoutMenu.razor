@@ -1,98 +1,119 @@
-﻿@inject IKioskBackend KioskBackend
+﻿@implements IDisposable
+@inject IKioskBackend KioskBackend
 
 <KeySequenceReader OnKeySequenceEntered="@HandleKeySequenceEntered" />
-<input type="text" @bind-value="@_scancode" />
 
-<ol style="display: grid; grid-template-columns: 1fr 1fr 1fr;">
-    <li>
-        <h2>Available Items</h2>
-        @if (_availableEquipment != null)
-        {
-            <ul>
-                @foreach (var equipment in _availableEquipment)
-                {
-                    @if (_cart.IsInCart(equipment))
-                    {
-                        continue;
-                    }
-                    <li>
-                        @equipment.DisplayName
-                        <button @onclick="() => AddItemToCart(equipment)">Add to Cart</button>
-                    </li>
-                }
-            </ul>
-        }
-        else
-        {
-            <span>Loading...</span>
-        }
-    </li>
-    <li>
-        <h2>Cart</h2>
-        @if (_cart.RequestedEquipment.Any())
-        {
-            <h3>Checkout Items</h3>
-            <ul>
-                @foreach (var equipment in _cart.RequestedEquipment)
-                {
-                    <li>
-                        @equipment.DisplayName
-                        <button @onclick="() => RemoteItemFromCart(equipment)">Remove from Cart</button>
-                    </li>
-                }
-            </ul>
-        }
-        @if (_cart.ReturnedEquipment.Any())
-        {
-            <h3>Return Items</h3>
-            <ul>
-                @foreach (var equipment in _cart.ReturnedEquipment)
-                {
-                    <li>
-                        @equipment.DisplayName
-                        <button @onclick="() => CancelReturnItem(equipment)">Cancel Return</button>
-                    </li>
-                }
-            </ul>
-        }
-    </li>
-    <li>
-        <h2>Already Loaned</h2>
-        @if (_loanedEquipment != null)
-        {
-            <ul>
-                @foreach (var equipment in _loanedEquipment)
-                {
-                    @if (_cart.HasReturned(equipment))
-                    {
-                        continue;
-                    }
-                    <li>@equipment.DisplayName</li>
-                }
-            </ul>
-        }
-        else
-        {
-            <span>Loading...</span>
-        }
-    </li>
-</ol>
+<div class="equipment-checkout-menu">
+    <form>
+        <label>
+            <img src="assets/images/barcode.svg" style="width: 50px" /> Equipment Scancode:
+            <input type="text" />
+        </label>
+        <input type="button" value="Enter" />
+    </form>
+    <ol class="equipment-pools">
+        <li class="equipment-pool">
+            <h2><img src="/assets/images/shop.svg" style="width: 100px" /> Available Items</h2>
+            @if (_availableEquipment != null)
+            {
+                <div class="equipment-list">
+                    <ul>
+                        @foreach (var equipment in _availableEquipment)
+                        {
+                            @if (_cart.IsInCart(equipment))
+                            {
+                                continue;
+                            }
+                            <li @key="@equipment.Id">
+                                <EquipmentCard Equipment="@equipment" ActionName="Add to Cart" OnAction="AddItemToCart" />
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+            else
+            {
+                <LoadingSpinner />
+            }
+        </li>
+        <li class="equipment-pool">
+            <h2><img src="/assets/images/basket.svg" style="width: 100px" />Cart</h2>
+            @if (_cart.RequestedEquipment.Any())
+            {
+                <div class="equipment-list">
+                    <h3>Checkout Items</h3>
+                    <ul class="equipment-list">
+                        @foreach (var equipment in _cart.RequestedEquipment)
+                        {
+                            <li @key="@equipment.Id">
+                                <EquipmentCard Equipment="@equipment" ActionName="Remove from Cart" OnAction="RemoteItemFromCart" />
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+            @if (_cart.ReturnedEquipment.Any())
+            {
+                <div class="equipment-list">
+                    <h3>Return Items</h3>
+                    <ul class="equipment-list">
+                        @foreach (var equipment in _cart.ReturnedEquipment)
+                        {
+                            <li @key="@equipment.Id">
+                                <EquipmentCard Equipment="@equipment" ActionName="Cancel Return" OnAction="CancelReturnItem" />
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+        </li>
+        <li class="equipment-pool">
+            <h2><img src="/assets/images/stuff.svg" style="width: 100px" /> Already Loaned</h2>
+            @if (_loanedEquipment != null)
+            {
+                <div class="equipment-list">
+                    <ul>
+                        @foreach (var equipment in _loanedEquipment)
+                        {
+                            @if (_cart.HasReturned(equipment))
+                            {
+                                continue;
+                            }
+                            <li @key="@equipment.Id">
+                                <EquipmentCard Equipment="@equipment" />
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+            else
+            {
+                <LoadingSpinner />
+            }
+        </li>
+    </ol>
+</div>
 
 @code {
-    [Parameter] public EventCallback<EquipmentCheckoutCart> OnCheckout { get; set;  }
+    [Parameter] public EventCallback<EquipmentCheckoutCart> OnCartChanged { get; set; } = EventCallback<EquipmentCheckoutCart>.Empty;
     [CascadingParameter] public ActiveUserState ActiveUserState { get; set; } = null!;
     private EquipmentCheckoutCart _cart = new();
     private IEnumerable<EquipmentInfo>? _availableEquipment = null;
     private IEnumerable<EquipmentInfo>? _loanedEquipment = null;
     private string _scancode = string.Empty;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         var availableEquipmentTask = KioskBackend.GetAllAvailableEquipmentAsync();
         var loanedEquipmentTask = KioskBackend.GetEquipmentLoanedToUserAsync(ActiveUserState.UserInfo!.Id);
-        await Task.WhenAll(availableEquipmentTask, loanedEquipmentTask);
-        _availableEquipment = availableEquipmentTask.Result;
-        _loanedEquipment = loanedEquipmentTask.Result;
+        Task.WhenAll(availableEquipmentTask, loanedEquipmentTask).ContinueWith(_ =>
+        {
+            _availableEquipment = availableEquipmentTask.Result;
+            _loanedEquipment = loanedEquipmentTask.Result;
+            InvokeAsync(StateHasChanged);
+        });
+        
+        _cart.OnCartChanged += HandleCartChanged;
     }
 
     private void AddItemToCart(EquipmentInfo equipment)
@@ -110,6 +131,11 @@
         _cart.CancelReturnItem(equipment);
     }
 
+    private void HandleCartChanged(EquipmentCheckoutCart _)
+    {
+        OnCartChanged.InvokeAsync(_cart);
+    }
+
     private async Task HandleKeySequenceEntered(IReadOnlyCollection<string> keys)
     {
         var scancode = string.Join("", keys);
@@ -118,13 +144,26 @@
         {
             return;
         }
-        else if (_loanedEquipment.Any(e => e.Id == matchingEquipment.Id))
+        else if (_cart.HasReturned(matchingEquipment))
+        {
+            _cart.CancelReturnItem(matchingEquipment);
+        }
+        else if (_cart.IsInCart(matchingEquipment))
+        {
+            _cart.RemoveItemToCart(matchingEquipment);
+        }
+        else if (_loanedEquipment?.Any(e => e.Id == matchingEquipment.Id) == true)
         {
             _cart.ReturnItem(matchingEquipment);
         }
-        else if (_availableEquipment.Any(e => e.Id == matchingEquipment.Id))
+        else if (_availableEquipment?.Any(e => e.Id == matchingEquipment.Id) == true)
         {
             _cart.AddItemToCart(matchingEquipment);
         }
+    }
+
+    public void Dispose()
+    {
+        _cart.OnCartChanged -= HandleCartChanged;
     }
 }

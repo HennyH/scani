@@ -1,5 +1,13 @@
 ﻿@page "/"
+@inject ActiveUserService ActiveUserService
 
 <PageTitle>Kiosk</PageTitle>
 
 <KioskScreen />
+
+@code {
+    protected override void OnInitialized()
+    {
+        ActiveUserService.LogoutActiveUser();
+    }
+}

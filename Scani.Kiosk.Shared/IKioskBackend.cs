@@ -9,5 +9,6 @@ public interface IKioskBackend
     public Task<IEnumerable<EquipmentInfo>> GetAllEquipmentAsync();
     public Task<IEnumerable<EquipmentInfo>> GetEquipmentLoanedToUserAsync(int userId);
     public Task<IEnumerable<EquipmentInfo>> GetAllAvailableEquipmentAsync();
-    public Task MarkLoanedEquipmentAsReturnedByUser(int userId, IEnumerable<int> equipmentIds);
+    public Task CheckoutEquipmentAsUserAsync(int userId, IEnumerable<int> equipmentIds);
+    public Task MarkLoanedEquipmentAsReturnedByUserAsync(int userId, IEnumerable<int> equipmentIds);
 }

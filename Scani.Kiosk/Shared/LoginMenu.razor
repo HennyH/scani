@@ -1,0 +1,38 @@
+﻿@inject IKioskBackend KioskBackend
+@inject ActiveUserService ActiveUserService
+@inject NavigationManager NavigationManager
+
+<KeySequenceReader OnKeySequenceEntered="@(keys => TryLoginWithScancode(string.Join("", keys)))" />
+
+<form @onsubmit="@HandleLogin">
+    <ScannerImage />
+    <label>
+        Name or Scancode:
+        <input type="text" @bind-value="@_scancode" />
+    </label>
+    <input type="submit" value="Login" />
+    @if (_loginErrorMessage != null)
+    {
+        <p class="validation-message">@_loginErrorMessage</p>
+    }
+</form>
+
+@code {
+    private string _scancode { get; set; } = string.Empty;
+    private string? _loginErrorMessage { get; set; } = null;
+
+    private async Task HandleLogin()
+    {
+        await TryLoginWithScancode(_scancode);
+    }
+
+    private async Task TryLoginWithScancode(string scancode)
+    {
+        var user = await KioskBackend.GetUserByScancodeAsync(_scancode);
+        _loginErrorMessage = user == null
+            ? "User not found"
+            : null;
+        if (user != null) ActiveUserService.SetActiveUser(user);
+        NavigationManager.NavigateTo("/checkout");
+    }
+}

@@ -3,6 +3,7 @@ using Scani.Kiosk.Shared.Models;
 using System.Dynamic;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 
 namespace Scani.SnipeIT;
@@ -15,6 +16,24 @@ public class SnipeITKioskBackend : IKioskBackend
         _httpClient = httpClient;
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiYTY0NTY3ZGVlNjI0ZmU2NDM3YmExMmJlNGFhNmUzY2Y4MWE2MWQ1ZDk4YzA3MGE5ZDc4NDNkOTM1MTUzYWYxOGRmNDEyOWRmYjYzZDEzMzQiLCJpYXQiOjE2MzQ3ODgwMzgsIm5iZiI6MTYzNDc4ODAzOCwiZXhwIjoyODk3MDkyMDM4LCJzdWIiOiIxIiwic2NvcGVzIjpbXX0.khJjGS_WIYZ5-fZNx_Ryn7xqtYltNs8Lrru3tVa48TNypbYU22l-8hmgOgFgos68Vs5SvbhlDYaqk_CPX8cjJjVM3FXfOYwEv_M87bhx-g_0YjfEXSD8OFkzrBycbKSGAuTYre4AWtDYJ8TjraUTWJsdqgRYBWsRVkAMiuGg8IPYG7RdBCIUEQi7M8mBfkpPA-YrPICm5bOgqqCEziKEp2ny7E8UfX6j6-a5iR_wYsJkYRhUYUFUY53dSuFRRpqjQbCbRCRDB-3wPocfoMVEAG-_6VOvadefxzfq0yixapsPl5jMvrvtf9pDknJ3KuKFXCcFhbYckJTiCGBgGvqD_qDjH7w9vs9l68J227J0hMPUQciBsFsElHo6_7nlINIMYodAW8ITHsyblflpmgLW_4sARGMqn-1uVK_0cYXxT7qn9BAL1aAC3CkEhGV2w4TqvON3czYLU6sDl6M7FItUGBhZPTsxecZPyFGMFeW2HsfEuNNgCggG1raGLz-3NXhtCZTPIIjUoA_qCTMX6avHahE5_m0ntFaO692WrGTgXOYJuCNuZOqPX43AXfCDqAt4cm4XMKrBrW2_7snZKTBPvh4_cNGMhnMipmfO80UlXJq4ZNWE4T44etEpTv8dVJFeHBt3iyAnHSng8IsGFuR3-iwt81RCNWaKH_ofAdrKEwA");
+    }
+
+    public async Task CheckoutEquipmentAsUserAsync(int userId, IEnumerable<int> equipmentIds)
+    {
+        foreach (var equipmentId in equipmentIds)
+        {
+            var response = await _httpClient.PostAsync(
+                $"http://localhost:8000/api/v1/hardware/{equipmentId}/checkout",
+                new StringContent(
+                    JsonSerializer.Serialize(new
+                    {
+                        checkout_to_type = "user",
+                        assigned_user = userId
+                    }),
+                    Encoding.UTF8,
+                    "application/json"));
+            if (response.StatusCode != HttpStatusCode.OK) break;
+        }
     }
 
     public async Task<IEnumerable<EquipmentInfo>> GetAllAvailableEquipmentAsync()
@@ -128,8 +147,20 @@ public class SnipeITKioskBackend : IKioskBackend
         return null;
     }
 
-    public Task MarkLoanedEquipmentAsReturnedByUser(int userId, IEnumerable<int> equipmentIds)
+    public async Task MarkLoanedEquipmentAsReturnedByUserAsync(int userId, IEnumerable<int> equipmentIds)
     {
-        throw new NotImplementedException();
+        foreach (var equipmentId in equipmentIds)
+        {
+            var response = await _httpClient.PostAsync(
+                $"http://localhost:8000/api/v1/hardware/{equipmentId}/checkin",
+                new StringContent(
+                    JsonSerializer.Serialize(new
+                    {
+                        note = $"Returned by user id = {userId}"
+                    }),
+                    Encoding.UTF8,
+                    "application/json"));
+            if (response.StatusCode != HttpStatusCode.OK) break;
+        }
     }
 }

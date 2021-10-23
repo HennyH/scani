@@ -1,0 +1,15 @@
+﻿@inject ActiveUserService ActiveUserService
+
+<button disabled="@(!ActiveUserState.HasActiveUser)" @onclick="@HandleExitClicked" style="background-color: lightcoral; width: 150px">
+    <img src="/assets/images/stop-sign.svg" style="height: 60px" />
+    Exit
+</button>
+
+@code {
+    [CascadingParameter] public ActiveUserState ActiveUserState { get; set; } = null!;
+
+    private void HandleExitClicked()
+    {
+        ActiveUserService.LogoutActiveUser();
+    }
+}
