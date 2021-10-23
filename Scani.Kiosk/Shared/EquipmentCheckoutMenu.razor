@@ -4,16 +4,16 @@
 <KeySequenceReader OnKeySequenceEntered="@HandleKeySequenceEntered" />
 
 <div class="equipment-checkout-menu">
-    <form>
+    <form @onclick="HandleManualScancodeFormSubmit" @onclick:preventDefault @onclick:stopPropagation>
         <label>
             <img src="assets/images/barcode.svg" style="width: 50px" /> Equipment Scancode:
-            <input type="text" />
+            <input required type="text" @bind-value="@_scancode" />
         </label>
-        <input type="button" value="Enter" />
+        <input type="submit" value="Enter" />
     </form>
     <ol class="equipment-pools">
         <li class="equipment-pool">
-            <h2><img src="/assets/images/shop.svg" style="width: 100px" /> Available Items</h2>
+            <h2><img src="/assets/images/shop.svg" style="width: 100px" /> Available</h2>
             @if (_availableEquipment != null)
             {
                 <div class="equipment-list">
@@ -41,7 +41,7 @@
             @if (_cart.RequestedEquipment.Any())
             {
                 <div class="equipment-list">
-                    <h3>Checkout Items</h3>
+                    <h3>Take</h3>
                     <ul class="equipment-list">
                         @foreach (var equipment in _cart.RequestedEquipment)
                         {
@@ -55,7 +55,7 @@
             @if (_cart.ReturnedEquipment.Any())
             {
                 <div class="equipment-list">
-                    <h3>Return Items</h3>
+                    <h3>Return</h3>
                     <ul class="equipment-list">
                         @foreach (var equipment in _cart.ReturnedEquipment)
                         {
@@ -66,9 +66,13 @@
                     </ul>
                 </div>
             }
+            @if (_cart.IsEmpty)
+            {
+                <p style="text-align: center;">Your cart is empty :(</p>
+            }
         </li>
         <li class="equipment-pool">
-            <h2><img src="/assets/images/stuff.svg" style="width: 100px" /> Already Loaned</h2>
+            <h2><img src="/assets/images/stuff.svg" style="width: 100px" /> Loaned</h2>
             @if (_loanedEquipment != null)
             {
                 <div class="equipment-list">
@@ -112,8 +116,43 @@
             _loanedEquipment = loanedEquipmentTask.Result;
             InvokeAsync(StateHasChanged);
         });
-        
+
         _cart.OnCartChanged += HandleCartChanged;
+    }
+
+    protected async Task HandleScancodeEntered(string scancode)
+    {
+        var matchingEquipment = await KioskBackend.GetEquipmentByScancodeAsync(scancode);
+        if (matchingEquipment == null)
+        {
+            return;
+        }
+        else if (_cart.HasReturned(matchingEquipment))
+        {
+            _cart.CancelReturnItem(matchingEquipment);
+        }
+        else if (_cart.IsInCart(matchingEquipment))
+        {
+            _cart.RemoveItemToCart(matchingEquipment);
+        }
+        else if (_loanedEquipment?.Any(e => e.Id == matchingEquipment.Id) == true)
+        {
+            _cart.ReturnItem(matchingEquipment);
+        }
+        else if (_availableEquipment?.Any(e => e.Id == matchingEquipment.Id) == true)
+        {
+            _cart.AddItemToCart(matchingEquipment);
+        }
+    }
+
+    protected async Task HandleManualScancodeFormSubmit()
+    {
+        if (!string.IsNullOrWhiteSpace(_scancode))
+        {
+            await HandleScancodeEntered(_scancode);
+        }
+
+        _scancode = string.Empty;
     }
 
     private void AddItemToCart(EquipmentInfo equipment)
@@ -139,27 +178,7 @@
     private async Task HandleKeySequenceEntered(IReadOnlyCollection<string> keys)
     {
         var scancode = string.Join("", keys);
-        var matchingEquipment = await KioskBackend.GetEquipmentByScancodeAsync(scancode);
-        if (matchingEquipment == null)
-        {
-            return;
-        }
-        else if (_cart.HasReturned(matchingEquipment))
-        {
-            _cart.CancelReturnItem(matchingEquipment);
-        }
-        else if (_cart.IsInCart(matchingEquipment))
-        {
-            _cart.RemoveItemToCart(matchingEquipment);
-        }
-        else if (_loanedEquipment?.Any(e => e.Id == matchingEquipment.Id) == true)
-        {
-            _cart.ReturnItem(matchingEquipment);
-        }
-        else if (_availableEquipment?.Any(e => e.Id == matchingEquipment.Id) == true)
-        {
-            _cart.AddItemToCart(matchingEquipment);
-        }
+        await HandleScancodeEntered(scancode);
     }
 
     public void Dispose()

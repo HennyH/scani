@@ -11,16 +11,27 @@
     display: grid;
     gap: 1em;
     grid-template-columns: repeat(3, 1fr);
+    align-items: start;
     padding: 0;
 }
 
 .equipment-pool {
     display: grid;
     grid-template-rows: max-content 1fr;
+    border: 1px solid gray;
+    border-radius: 10px;
+    padding: 1em;
+}
+
+.equipment-pool > * {
+    margin-bottom: 0.5em;
 }
 
 .equipment-pool > h2, .equipment-list > h3 {
     text-align: center;
+    background-color: antiquewhite;
+    border-radius: 5px;
+    margin-bottom: 0.5em;
 }
 
 form {

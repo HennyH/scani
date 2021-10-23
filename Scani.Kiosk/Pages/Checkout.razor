@@ -10,7 +10,7 @@
     </Screen>
     <Footer>
         <div class="footer">
-            <LogoutButton />
+            <LogoutButton OnLogout="ResetCart" />
             <button disabled="@(_cart == null || _cart.IsEmpty)" @onclick="HandleCheckout">
                 @if (!(_cart == null || _cart.IsEmpty))
                 {
@@ -27,6 +27,11 @@
     private const string DEFAULT_CHECKOUT_BTN_TEXT = "Checkout Items";
     private EquipmentCheckoutCart? _cart;
     private string _checkoutButtonText = DEFAULT_CHECKOUT_BTN_TEXT;
+
+    protected void ResetCart()
+    {
+        HandleCartChanged(new EquipmentCheckoutCart());
+    }
 
     protected void HandleCartChanged(EquipmentCheckoutCart cart)
     {

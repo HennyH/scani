@@ -6,10 +6,12 @@
 </button>
 
 @code {
+    [Parameter] public EventCallback OnLogout { get; set; } = EventCallback.Empty;
     [CascadingParameter] public ActiveUserState ActiveUserState { get; set; } = null!;
 
-    private void HandleExitClicked()
+    private async Task HandleExitClicked()
     {
         ActiveUserService.LogoutActiveUser();
+        await OnLogout.InvokeAsync();
     }
 }
