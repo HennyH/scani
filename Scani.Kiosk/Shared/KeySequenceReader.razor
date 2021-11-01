@@ -33,7 +33,9 @@
         {
             await JsRuntime.InvokeVoidAsync("deregisterKeySequenceListener");
         }
-        catch (InvalidOperationException)
-        { }
+        catch (Exception error) when (error is InvalidOperationException || error is JSDisconnectedException)
+        {
+            Logger.LogWarning("Failed to deregister key sequence listenter with error: {}", error);
+        }
     }
 }

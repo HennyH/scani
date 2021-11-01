@@ -5,11 +5,11 @@ namespace Scani.Kiosk.Data;
 public class EquipmentCheckoutCart
 {
     public event Action<EquipmentCheckoutCart> OnCartChanged = null!;
-    private readonly IDictionary<int, EquipmentInfo> _idToReturnedEquipment = new Dictionary<int, EquipmentInfo>();
-    private readonly IDictionary<int, EquipmentInfo> _idToRequestedEquipment = new Dictionary<int, EquipmentInfo>();
-    public IEnumerable<int> ReturnedEquipmentIds => _idToReturnedEquipment.Keys;
+    private readonly IDictionary<string, EquipmentInfo> _idToReturnedEquipment = new Dictionary<string, EquipmentInfo>();
+    private readonly IDictionary<string, EquipmentInfo> _idToRequestedEquipment = new Dictionary<string, EquipmentInfo>();
+    public IEnumerable<string> ReturnedEquipmentIds => _idToReturnedEquipment.Keys;
     public IEnumerable<EquipmentInfo> ReturnedEquipment => _idToReturnedEquipment.Values;
-    public IEnumerable<int> RequestedEquipmentIds => _idToRequestedEquipment.Keys;
+    public IEnumerable<string> RequestedEquipmentIds => _idToRequestedEquipment.Keys;
     public IEnumerable<EquipmentInfo> RequestedEquipment => _idToRequestedEquipment.Values;
     public bool IsEmpty => !(_idToRequestedEquipment.Any() || _idToReturnedEquipment.Any());
 

@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Scani.Kiosk.Shared\Scani.Kiosk.Shared.csproj" />
-    <ProjectReference Include="..\Scani.SnipeIT\Scani.SnipeIT.csproj" />
+    <PackageReference Include="EPPlus" Version="4.5.3.3" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0-rc.2.21480.5" />
   </ItemGroup>
 
 </Project>
