@@ -2,25 +2,24 @@
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using System.Collections.Concurrent;
-using Scani.Kiosk.Backends.GoogleSheet.Sheets;
-using static Scani.Kiosk.Backends.GoogleSheet.SynchronizedGoogleSheetKioskState;
+using static Scani.Kiosk.Backends.GoogleSheet.SynchronizedKioskState;
 
 namespace Scani.Kiosk.Backends.GoogleSheet
 {
-    public class GoogleSheetSynchronizer : IHostedService, IDisposable
+    public class KioskSheetSynchronizer : IHostedService, IDisposable
     {
-        private readonly ILogger<GoogleSheetSynchronizer> _logger;
+        private readonly ILogger<KioskSheetSynchronizer> _logger;
         private readonly TimeSpan _syncInterval;
         private readonly KioskSheetReaderWriter _kioskSheetReaderWriter;
-        private readonly SynchronizedGoogleSheetKioskState _kioskState;
+        private readonly SynchronizedKioskState _kioskState;
         private int _executionCount = 0;
         private Timer? _timer;
 
-        public GoogleSheetSynchronizer(
-                ILogger<GoogleSheetSynchronizer> logger,
+        public KioskSheetSynchronizer(
+                ILogger<KioskSheetSynchronizer> logger,
                 IConfiguration configuration,
                 KioskSheetReaderWriter kioskSheetReaderWriter,
-                SynchronizedGoogleSheetKioskState kioskState)
+                SynchronizedKioskState kioskState)
         {
             this._logger = logger;
             this._syncInterval = configuration.GetValue<TimeSpan>("GoogleSheet:SyncInterval");
@@ -37,10 +36,10 @@ namespace Scani.Kiosk.Backends.GoogleSheet
                 var nextState = await _kioskSheetReaderWriter.ReadAsync();
                 await _kioskState.ReduceStateAsync(prevState => Task.FromResult(new GoogleSheetKioskState
                 {
-                    Students = nextState.Students,
-                    EquipmentItems = nextState.EquipmentItems,
-                    Loans = prevState?.Loans?.Any() == true ? prevState.Loans : nextState.Loans
-                } as IGoogleSheetKioskState));
+                    StudentsSheet = nextState.StudentsSheet,
+                    EquipmentSheet = nextState.EquipmentSheet,
+                    LoanSheet = prevState?.LoanSheet != null? prevState.LoanSheet : nextState.LoanSheet
+                }));
             }
             catch (Exception error)
             {

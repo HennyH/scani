@@ -1,6 +1,6 @@
 ﻿<div class="equipment-card">
     <span class="icon">📷</span>
-    <span class="name">@Equipment.DisplayName</span>
+    <span class="name">@Equipment.Name</span>
     @if (ActionName != null)
     {
         <button @onclick="() => OnAction.InvokeAsync(Equipment)">
@@ -10,7 +10,7 @@
 </div>
 
 @code {
-    [Parameter] public EquipmentInfo Equipment { get; set; } = null!;
+    [Parameter] public EquipmentRow Equipment { get; set; } = null!;
     [Parameter] public string? ActionName { get; set; } = null!;
-    [Parameter] public EventCallback<EquipmentInfo> OnAction { get; set; } = EventCallback<EquipmentInfo>.Empty;
+    [Parameter] public EventCallback<EquipmentRow> OnAction { get; set; } = EventCallback<EquipmentRow>.Empty;
 }

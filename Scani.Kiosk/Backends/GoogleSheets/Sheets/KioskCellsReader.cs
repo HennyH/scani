@@ -10,10 +10,18 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
     {
         private const int MAX_FLEX_FIELDS = 20;
 
-        public static KioskSheetReadResult<T> ParseCells<T>(ILogger logger, string sheetName, IList<IList<object>> cells, int numberOfHeaderRows, int dataHeaderRowNumber, (int RowNumber, int ColNumber)? firstFlexFieldCell)
+        public static KioskSheetReadResult<T> ParseCells<T>(ILogger logger, string sheetName, IList<IList<object>> cells, int numberOfHeaderRows, int dataHeaderRowNumber, (int RowNumber, int ColNumber)? firstFlexFieldCell = null)
             where T : ISheetRow
         {
-            var result = new KioskSheetReadResult<T>();
+            var expectedColumns = GetExpectedColumns<T>();
+            var maxExpectedColumnNumber = expectedColumns.Max(ec => ec.ColumnNumber);
+            var result = new KioskSheetReadResult<T>()
+            {
+                SheetName = sheetName,
+                NextDataRowNumber = Math.Max(dataHeaderRowNumber + 1, cells.Count + 1),
+                DataRowNumberToRange = rowNumber => $"{sheetName}!A{rowNumber}:{GetExcelColumnName(maxExpectedColumnNumber)}{rowNumber}"
+            };
+
             if (cells.Count < numberOfHeaderRows)
             {
                 result.Errors.Add(new MissingExpectedHeaderRows(sheetName, numberOfHeaderRows, cells.Count));
@@ -59,8 +67,6 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
             }
 
             /* Here we read the data row headers and check they're all good */
-            var expectedColumns = GetExpectedColumns<T>();
-
             if (cells.Count > dataHeaderRowNumber)
             {
                 var dataHeaderRow = cells[dataHeaderRowNumber - 1];
@@ -81,6 +87,7 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                     else
                     {
                         var actualName = dataHeaderRow[expectedColumnNumber - 1] as string;
+
                         if (string.IsNullOrEmpty(actualName) || !string.Equals(actualName, expectedColumnName, StringComparison.OrdinalIgnoreCase))
                         {
                             if (isRequired)
@@ -107,15 +114,15 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                 }
 
                 /* Finally it is time to read the data rows into objects */
-                var maxExpectedColumnNumber = expectedColumns.Max(ec => ec.Column);
                 ulong? firstGeneratedScancode = null;
                 HashSet<string> generatedScancodes = new HashSet<string>();
+                HashSet<string> scancodes = new HashSet<string>();
                 for (int dataRowNumber = dataHeaderRowNumber + 1; dataRowNumber <= cells.Count; dataRowNumber++)
                 {
                     bool isValidRow = true;
                     var dataRow = cells[dataRowNumber - 1];
 
-                    if (dataRow.Count < maxExpectedColumnNumber)
+                    if (dataRow.Count < expectedColumns.Where(c => c.IsRequired).Count())
                     {
                         result.Errors.Add(new DataRowMissingValues(sheetName, dataRowNumber, maxExpectedColumnNumber, dataRow.Count));
                         isValidRow = false;
@@ -123,17 +130,28 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                     else
                     {
                         var item = (T)Activator.CreateInstance(typeof(T), nonPublic: true)!;
-                        item.Range = $"A{dataHeaderRowNumber}:{GetExcelColumnName(maxExpectedColumnNumber)}{dataHeaderRowNumber}";
+                        item.Range = result.DataRowNumberToRange(dataRowNumber);
 
                         foreach (var (columnNumber, columnName, isRequired, property) in expectedColumns)
                         {
-                            var value = dataRow[columnNumber - 1] as string;
-                            if (string.IsNullOrWhiteSpace(value) && isRequired)
+                            if (columnNumber > dataRow.Count)
                             {
-                                result.Errors.Add(new DataRowExpectedValueMissing(sheetName, columnName, dataRowNumber, columnNumber));
-                                isValidRow = false;
+                                if (isRequired)
+                                {
+                                    result.Errors.Add(new DataRowExpectedValueMissing(sheetName, columnName, dataRowNumber, columnNumber));
+                                    isValidRow = false;
+                                }
                             }
-                            property.SetValue(item, value ?? string.Empty);
+                            else
+                            {
+                                var value = dataRow[columnNumber - 1] as string;
+                                if (string.IsNullOrWhiteSpace(value) && isRequired)
+                                {
+                                    result.Errors.Add(new DataRowExpectedValueMissing(sheetName, columnName, dataRowNumber, columnNumber));
+                                    isValidRow = false;
+                                }
+                                property.SetValue(item, value ?? string.Empty);
+                            }
                         }
 
                         if (firstFlexFieldCell != null && result.FlexFieldNames.Any() && (item is IHaveFlexFields itemWithFlexFields))
@@ -160,22 +178,46 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                         if (item is IHaveScancode itemWithScancode)
                         {
                             var generatedScancode = itemWithScancode.GeneratedScancode;
+                            var customScancode = itemWithScancode.CustomScancode;
+                            ulong generatedScancodeAsNumber = 0;
+
                             if (string.IsNullOrWhiteSpace(generatedScancode) || !Regex.IsMatch(generatedScancode, @"^\d+$"))
                             {
                                 result.Errors.Add(new InvalidGeneratedScancode(sheetName, generatedScancode, dataRowNumber));
                                 isValidRow = false;
                             }
                             else if (firstGeneratedScancode.HasValue
-                                     && ulong.TryParse(generatedScancode, out var scancodeAsNumber)
-                                     && scancodeAsNumber != firstGeneratedScancode.Value + (ulong)(dataRowNumber - dataHeaderRowNumber))
+                                     && ulong.TryParse(generatedScancode, out generatedScancodeAsNumber)
+                                     && generatedScancodeAsNumber != firstGeneratedScancode.Value + (ulong)(dataRowNumber - (dataHeaderRowNumber + 1)))
                             {
-                                result.Errors.Add(new NonSequentialGeneratedScancodes(sheetName, dataRowNumber, firstGeneratedScancode.Value + (ulong)(dataRowNumber - dataHeaderRowNumber), scancodeAsNumber));
+                                result.Errors.Add(new NonSequentialGeneratedScancodes(sheetName, dataRowNumber, firstGeneratedScancode.Value + (ulong)(dataRowNumber - dataHeaderRowNumber), generatedScancodeAsNumber));
                                 isValidRow = false;
                             }
                             else if (generatedScancodes.Contains(generatedScancode))
                             {
                                 result.Errors.Add(new DuplicateGeneratedScancode(sheetName, generatedScancode, dataRowNumber));
                                 isValidRow = false;
+                            }
+                            else if (itemWithScancode.CustomScancode != null && scancodes.Contains(itemWithScancode.CustomScancode))
+                            {
+                                result.Errors.Add(new DuplicateCustomScancode(sheetName, itemWithScancode.CustomScancode, dataRowNumber));
+                                isValidRow = false;
+                            }
+
+                            if (firstGeneratedScancode == null && ulong.TryParse(generatedScancode, out generatedScancodeAsNumber))
+                            {
+                                firstGeneratedScancode = generatedScancodeAsNumber;
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(generatedScancode))
+                            {
+                                generatedScancodes.Add(generatedScancode);
+                                scancodes.Add(generatedScancode);
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(customScancode))
+                            {
+                                scancodes.Add(itemWithScancode.Scancode);
                             }
                         }
 
@@ -211,9 +253,9 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
             return columnName;
         }
 
-        private static IEnumerable<(int Column, string ColumnName, bool IsRequired, PropertyInfo Property)> GetExpectedColumns<T>()
+        private static IEnumerable<(int ColumnNumber, string ColumnName, bool IsRequired, PropertyInfo Property)> GetExpectedColumns<T>()
         {
-            var results = new List<(int Column, string ColumnName, bool IsRequired, PropertyInfo Property)>();
+            var columns = new List<(int Order, string ColumnName, bool IsRequired, PropertyInfo Property)>();
             foreach (var property in typeof(T).GetProperties())
             {
                 var attributes = property.GetCustomAttributes(true);
@@ -230,9 +272,14 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                     throw new ArgumentException("Any [Column] declared on a sheet row must have the Name defined.", nameof(T));
                 }
                 var isRequired = attributes.Any(a => a is RequiredAttribute);
-                results.Add((columnAttribute.Order, columnAttribute.Name!, isRequired, property));
+                columns.Add((columnAttribute.Order, columnAttribute.Name!, isRequired, property));
             }
-            return results;
+
+            if (columns.Any(c => c.Order < 0)) throw new ArithmeticException($"{typeof(T)} had a [Column] with an Order < 0");
+
+            return columns
+                .OrderBy(c => c.Order)
+                .Select((c, i) => (i + 1, c.ColumnName, c.IsRequired, c.Property)).ToList();
         }
     }
 }

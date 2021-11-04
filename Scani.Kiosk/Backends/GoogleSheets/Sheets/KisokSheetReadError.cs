@@ -188,4 +188,13 @@
                    $"The sheet {sheetName} has a generated scancode {generatedScancode} on row {rowNumber} which is already in use")
         { }
     }
+
+    public class DuplicateCustomScancode : KioskSheetReadError
+    {
+        public DuplicateCustomScancode(string sheetName, string customScancode, int rowNumber)
+            : base(KioskSheetReadErrorType.InvalidGeneratedScancode,
+                   sheetName,
+                   $"The sheet {sheetName} has a custom scancode {customScancode} on row {rowNumber} which is already in use")
+        { }
+    }
 }

@@ -1,4 +1,4 @@
-﻿@inject IKioskBackend KioskBackend
+﻿@inject SynchronizedKioskState KioskState
 @inject ActiveUserService ActiveUserService
 @inject NavigationManager NavigationManager
 
@@ -28,11 +28,11 @@
 
     private async Task TryLoginWithScancode(string scancode)
     {
-        var user = await KioskBackend.GetUserByScancodeAsync(scancode);
+        var user = await KioskState.ReadStateAsync(s => Task.FromResult(s.StudentWithScancode(scancode)));
         _loginErrorMessage = user == null
             ? "User not found"
             : null;
-        if (user != null) ActiveUserService.SetActiveUser(user);
+        if (user != null) ActiveUserService.SetActiveUser(new UserInfo(user.Scancode, user.DisplayName, false));
         NavigationManager.NavigateTo("/checkout");
     }
 }

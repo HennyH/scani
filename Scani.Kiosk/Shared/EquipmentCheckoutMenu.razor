@@ -1,6 +1,6 @@
 ﻿@implements IDisposable
-@inject IKioskBackend KioskBackend
-@inject Scani.Kiosk.Backends.GoogleSheet.GoogleSheetSynchronizer SheetSynchronizer
+@inject SynchronizedKioskState KioskState
+@inject Scani.Kiosk.Backends.GoogleSheet.KioskSheetSynchronizer SheetSynchronizer
 
 <KeySequenceReader OnKeySequenceEntered="@HandleKeySequenceEntered" />
 
@@ -25,7 +25,7 @@
                             {
                                 continue;
                             }
-                            <li @key="@equipment.Id">
+                            <li @key="@equipment.Scancode">
                                 <EquipmentCard Equipment="@equipment" ActionName="Add to Cart" OnAction="AddItemToCart" />
                             </li>
                         }
@@ -46,7 +46,7 @@
                     <ul class="equipment-list">
                         @foreach (var equipment in _cart.RequestedEquipment)
                         {
-                            <li @key="@equipment.Id">
+                            <li @key="@equipment.Scancode">
                                 <EquipmentCard Equipment="@equipment" ActionName="Remove from Cart" OnAction="RemoteItemFromCart" />
                             </li>
                         }
@@ -60,7 +60,7 @@
                     <ul class="equipment-list">
                         @foreach (var equipment in _cart.ReturnedEquipment)
                         {
-                            <li @key="@equipment.Id">
+                            <li @key="@equipment.Scancode">
                                 <EquipmentCard Equipment="@equipment" ActionName="Cancel Return" OnAction="CancelReturnItem" />
                             </li>
                         }
@@ -84,7 +84,7 @@
                             {
                                 continue;
                             }
-                            <li @key="@equipment.Id">
+                            <li @key="@equipment.Scancode">
                                 <EquipmentCard Equipment="@equipment" />
                             </li>
                         }
@@ -103,21 +103,21 @@
     [Parameter] public EventCallback<EquipmentCheckoutCart> OnCartChanged { get; set; } = EventCallback<EquipmentCheckoutCart>.Empty;
     [CascadingParameter] public ActiveUserState ActiveUserState { get; set; } = null!;
     private EquipmentCheckoutCart _cart = new();
-    private IEnumerable<EquipmentInfo>? _availableEquipment = null;
-    private IEnumerable<EquipmentInfo>? _loanedEquipment = null;
+    private IEnumerable<EquipmentRow>? _availableEquipment = null;
+    private IEnumerable<EquipmentRow>? _loanedEquipment = null;
     private string _scancode = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        _availableEquipment = await KioskBackend.GetAllAvailableEquipmentAsync();
-        _loanedEquipment = await KioskBackend.GetEquipmentLoanedToUserAsync(ActiveUserState.UserInfo!.Id);
+        _availableEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.AvailableEquipment));
+        _loanedEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.EquipmentLoanedToUser(ActiveUserState.UserInfo!.Id)));
 
         _cart.OnCartChanged += HandleCartChanged;
     }
 
     protected async Task HandleScancodeEntered(string scancode)
     {
-        var matchingEquipment = await KioskBackend.GetEquipmentByScancodeAsync(scancode);
+        var matchingEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.EquipmentWithScancode(scancode)));
         if (matchingEquipment == null)
         {
             return;
@@ -130,11 +130,11 @@
         {
             _cart.RemoveItemToCart(matchingEquipment);
         }
-        else if (_loanedEquipment?.Any(e => e.Id == matchingEquipment.Id) == true)
+        else if (_loanedEquipment?.Any(e => e.Scancode == matchingEquipment.Scancode) == true)
         {
             _cart.ReturnItem(matchingEquipment);
         }
-        else if (_availableEquipment?.Any(e => e.Id == matchingEquipment.Id) == true)
+        else if (_availableEquipment?.Any(e => e.Scancode == matchingEquipment.Scancode) == true)
         {
             _cart.AddItemToCart(matchingEquipment);
         }
@@ -150,17 +150,17 @@
         _scancode = string.Empty;
     }
 
-    private void AddItemToCart(EquipmentInfo equipment)
+    private void AddItemToCart(EquipmentRow equipment)
     {
         _cart.AddItemToCart(equipment);
     }
 
-    private void RemoteItemFromCart(EquipmentInfo equipment)
+    private void RemoteItemFromCart(EquipmentRow equipment)
     {
         _cart.RemoveItemToCart(equipment);
     }
 
-    private void CancelReturnItem(EquipmentInfo equipment)
+    private void CancelReturnItem(EquipmentRow equipment)
     {
         _cart.CancelReturnItem(equipment);
     }

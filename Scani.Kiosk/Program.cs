@@ -11,14 +11,13 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddScoped<ActiveUserService>();
 builder.Services.AddHttpClient();
-builder.Services.AddSingleton<IKioskBackend, GoogleSheetKioskBackend>();
-builder.Services.AddSingleton<GoogleSheetSynchronizer>();
+builder.Services.AddSingleton<KioskSheetSynchronizer>();
 builder.Services.AddSingleton<ThrottledKioskSheetAccessorFactory>();
 builder.Services.AddSingleton<LazyAsyncThrottledAccessor<SheetsService>>(services =>
     services.GetRequiredService<ThrottledKioskSheetAccessorFactory>().CreateAccessor(100, TimeSpan.FromMinutes(1)));
 builder.Services.AddSingleton<KioskSheetReaderWriter>();
-builder.Services.AddSingleton<SynchronizedGoogleSheetKioskState>();
-builder.Services.AddHostedService<GoogleSheetSynchronizer>(s => s.GetRequiredService<GoogleSheetSynchronizer>());
+builder.Services.AddSingleton<SynchronizedKioskState>();
+builder.Services.AddHostedService<KioskSheetSynchronizer>(s => s.GetRequiredService<KioskSheetSynchronizer>());
 
 var app = builder.Build();
 

@@ -1,9 +1,9 @@
 ﻿using Google.Apis.Sheets.v4;
 using Microsoft.VisualStudio.Threading;
-using Scani.Kiosk.Backends.GoogleSheet.Sheets;
 using Scani.Kiosk.Helpers;
 using Scani.Kiosk.Backends.GoogleSheets.Sheets;
 using Scani.Kiosk.Backends.GoogleSheets.Sheets.Models;
+using Google.Apis.Util;
 
 namespace Scani.Kiosk.Backends.GoogleSheet
 {
@@ -24,14 +24,48 @@ namespace Scani.Kiosk.Backends.GoogleSheet
             this._sheetsAccessor = sheetsAccessor;
         }
 
-        public async Task<IGoogleSheetKioskState> ReadAsync()
+        private async Task<IList<IList<IList<object>>>> GetRowsAsync(LazyAsyncThrottledAccessor<SheetsService> service, string sheetId, string[] sheetNames, int pageSize = 1000)
+        {
+            var results = new List<IList<IList<object>>>();
+            foreach (var _ in sheetNames)
+            {
+                results.Add(new List<IList<object>>());
+            }
+
+            for (var i = 1; true; i += pageSize + 1)
+            {
+                var response = await service.AccessAsync(async s =>
+                {
+                    var request = s.Spreadsheets.Values.BatchGet(sheetId);
+                    request.Ranges = new Repeatable<string>(sheetNames.Select(n => $"{n}!A1:Z{i + pageSize}").ToList());
+                    return await request.ExecuteAsync();
+                });
+
+                for (var s = 0; s < sheetNames.Length; s++)
+                {
+                    foreach (var row in response.ValueRanges[s].Values)
+                    {
+                        results[s].Add(row);
+                    }
+                }
+
+                if (response.ValueRanges.All(r => r.Values.Count < pageSize))
+                {
+                    break;
+                }
+            }
+
+            return results;
+        }
+
+        public async Task<GoogleSheetKioskState> ReadAsync()
         {
             _logger.LogInformation("Entering read lock on thread {}", Thread.CurrentThread.ManagedThreadId);
             var readLock = await this._sheetLock.ReadLockAsync();
             IList<IList<IList<object>>> sheetCells;
             try
             {
-                sheetCells = await _sheetsAccessor.GetRowsAsync(_sheetId, new[] { "Students", "Equipment", "Loans" });
+                sheetCells = await GetRowsAsync(_sheetsAccessor, _sheetId, new[] { "Students", "Equipment", "Loans" });
             }
             finally
             {
@@ -39,27 +73,32 @@ namespace Scani.Kiosk.Backends.GoogleSheet
                 await readLock.ReleaseAsync();
             }
 
-            var stuff = KioskCellsReader.ParseCells<EquipmentRow>(
+            var students = KioskCellsReader.ParseCells<StudentRow>(
+                _logger,
+                "Students",
+                sheetCells[0],
+                2,
+                2,
+                (2, 6));
+            var equipment = KioskCellsReader.ParseCells<EquipmentRow>(
                 _logger,
                 "Equipment",
                 sheetCells[1],
                 2,
                 2,
                 (2, 4));
+            var loans = KioskCellsReader.ParseCells<LoanRow>(
+                _logger,
+                "Loans",
+                sheetCells[2],
+                1,
+                1);
 
-            var studentCells = sheetCells[0];
-            var equipmentCells = sheetCells[1];
-            var loanCells = sheetCells[2];
-            var students = StudentSheet.ReadStudents(_logger, studentCells);
-            var equipment = EquipmentSheet.ReadEquipmentItems(_logger, equipmentCells);
-            var loans = LoanSheet.ReadLoans(_logger, loanCells);
             return new GoogleSheetKioskState
             {
-                Students = students.Values.ToList(),
-                EquipmentItems = equipment.Values.ToList(),
-                Loans = loans.Values.ToList(),
-                ParseErrors = students.Errors.Concat(equipment.Errors).ToList(),
-                ParseWarnings = students.Warnings.Concat(equipment.Warnings).ToList(),
+                StudentsSheet = students,
+                EquipmentSheet = equipment,
+                LoanSheet = loans
             };
         }
 

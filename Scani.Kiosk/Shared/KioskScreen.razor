@@ -1,8 +1,4 @@
-﻿@inject IKioskBackend KioskBackend
-@inject ActiveUserService ActiveUserService
-@inject NavigationManager NavigationManager
-
-<div id="kiosk-screen">
+﻿<div id="kiosk-screen">
     <header>
         <h1>@Title</h1>
         @if (ActiveUserState.UserInfo != null)
@@ -38,6 +34,4 @@
     [Parameter] public RenderFragment? Footer { get; set; }
     [Parameter] public RenderFragment? Screen { get; set; }
     [CascadingParameter] public ActiveUserState ActiveUserState { get; set; } = null!;
-
-    
 }

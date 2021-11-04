@@ -38,6 +38,8 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
         [Required]
         public string GeneratedScancode { get; set; }
 
+        public string Scancode => CustomScancode ?? GeneratedScancode;
+
         public string Range { get; set; }
 
         public IDictionary<string, string?> FlexFields { get; set; } = new Dictionary<string, string>();

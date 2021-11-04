@@ -1,6 +1,8 @@
 ﻿@page "/checkout"
-@inject IKioskBackend KioskBackend
+@inject SynchronizedKioskState KioskState
+@inject IConfiguration Configuration
 @inject NavigationManager NavigationManager
+@inject LazyAsyncThrottledAccessor<SheetsService> SheetsAccessor
 
 <PageTitle>Kiosk - Checkout</PageTitle>
 
@@ -27,6 +29,13 @@
     private const string DEFAULT_CHECKOUT_BTN_TEXT = "Checkout Items";
     private EquipmentCheckoutCart? _cart;
     private string _checkoutButtonText = DEFAULT_CHECKOUT_BTN_TEXT;
+    private string? _sheetId;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        _sheetId = Configuration.GetValue<string>("GoogleSheet:SheetId");
+    }
 
     protected void ResetCart()
     {
@@ -65,14 +74,42 @@
         if (_cart == null) return;
         if (!ActiveUserState.HasActiveUser || ActiveUserState.UserInfo == null) return;
 
+        var now = DateTime.Now;
+
         if (_cart.ReturnedEquipmentIds.Any())
         {
-            await KioskBackend.MarkLoanedEquipmentAsReturnedByUserAsync(ActiveUserState.UserInfo.Id, _cart.ReturnedEquipmentIds.ToList());
+            await KioskState.ReadStateAsync(async state =>
+            {
+                var loansToUpdate = new List<LoanRow>();
+                foreach (var loan in state.ActiveLoansForUser(ActiveUserState.UserInfo.Id))
+                {
+                    if (_cart.ReturnedEquipmentIds.Contains(loan.EquipmentScancode))
+                    {
+                        loan.ReturnedDate = now;
+                        loansToUpdate.Add(loan);
+                    }
+                }
+
+                await KioskSheetRowWriter.UpdateRowsAsync(_sheetId!, "Loans", SheetsAccessor, loansToUpdate);
+            });
         }
 
         if (_cart.RequestedEquipmentIds.Any())
         {
-            await KioskBackend.CheckoutEquipmentAsUserAsync(ActiveUserState.UserInfo.Id, _cart.RequestedEquipmentIds.ToList());
+            await KioskState.ReadStateAsync(async state =>
+            {
+                var newLoans = _cart.RequestedEquipmentIds
+                    .Select(equipmentScancode
+                        => new LoanRow(ActiveUserState.UserInfo.Id, equipmentScancode, now.ToString(), state.LoanSheet))
+                    .ToList();
+
+                foreach (var loan in newLoans)
+                {
+                    state.LoanSheet.Rows.Add(loan);
+                }
+
+                await KioskSheetRowWriter.UpdateRowsAsync(_sheetId!, "Loans", SheetsAccessor, newLoans);
+            });
         }
 
         NavigationManager.NavigateTo("/");
