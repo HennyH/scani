@@ -1,76 +1,68 @@
-﻿using OfficeOpenXml;
-using System.Net;
+﻿using Google.Apis.Auth.OAuth2;
+using Google.Apis.Services;
+using Google.Apis.Sheets.v4;
+using System.Collections.Concurrent;
+using Scani.Kiosk.Backends.GoogleSheet.Sheets;
+using static Scani.Kiosk.Backends.GoogleSheet.SynchronizedGoogleSheetKioskState;
 
 namespace Scani.Kiosk.Backends.GoogleSheet
 {
     public class GoogleSheetSynchronizer : IHostedService, IDisposable
     {
         private readonly ILogger<GoogleSheetSynchronizer> _logger;
-        private readonly HttpClient _httpClient;
-        private readonly string _sheetId;
         private readonly TimeSpan _syncInterval;
-        private long _executionCount = 1;
+        private readonly KioskSheetReaderWriter _kioskSheetReaderWriter;
+        private readonly SynchronizedGoogleSheetKioskState _kioskState;
+        private int _executionCount = 0;
         private Timer? _timer;
 
-        public event Action<GoogleSheetKioskState>? StateChanged;
-
-        public GoogleSheetSynchronizer(ILogger<GoogleSheetSynchronizer> logger, string sheetId, TimeSpan syncInterval)
+        public GoogleSheetSynchronizer(
+                ILogger<GoogleSheetSynchronizer> logger,
+                IConfiguration configuration,
+                KioskSheetReaderWriter kioskSheetReaderWriter,
+                SynchronizedGoogleSheetKioskState kioskState)
         {
-            _logger = logger;
-            _sheetId = sheetId;
-            _syncInterval = syncInterval;
-
-            var httpClientHandler = new HttpClientHandler();
-            httpClientHandler.AllowAutoRedirect = true;
-            _httpClient = new HttpClient(httpClientHandler);
+            this._logger = logger;
+            this._syncInterval = configuration.GetValue<TimeSpan>("GoogleSheet:SyncInterval");
+            this._kioskSheetReaderWriter = kioskSheetReaderWriter;
+            this._kioskState = kioskState;
         }
 
         private async void PerformSynchronization(object? _)
         {
             try
             {
-                _logger.LogInformation("Performing synchronization #{}", _executionCount);
-                var response = await _httpClient.GetAsync($"https://docs.google.com/spreadsheets/d/{_sheetId}/export?format=xlsx");
-                if (response.StatusCode != HttpStatusCode.OK)
+                _logger.LogInformation("Performing synchronization #{} on thread {}", _executionCount++, Thread.CurrentThread.ManagedThreadId);
+
+                var nextState = await _kioskSheetReaderWriter.ReadAsync();
+                await _kioskState.ReduceStateAsync(prevState => Task.FromResult(new GoogleSheetKioskState
                 {
-                    _logger.LogWarning("Expected OK response from /export but recieved {}", response.StatusCode);
-                    return;
-                }
-
-                using var stream = await response.Content.ReadAsStreamAsync();
-                using var package = new ExcelPackage(stream);
-
-                var students = StudentSheetParser.ParseStudentsFromWorksheet(_logger, package.Workbook.Worksheets["Students"]);
-                var equipment = EquipmentSheetParser.ParseEquipmentItemsFromWorksheet(_logger, package.Workbook.Worksheets["Equipment"]);
-                var state = new GoogleSheetKioskState
-                {
-                    Students = students.Values,
-                    EquipmentItems = equipment.Values,
-                    ParseErrors = students.Errors.Concat(equipment.Errors).ToList(),
-                    ParseWarnings = students.Warnings.Concat(equipment.Warnings).ToList(),
-                };
-
-                StateChanged?.Invoke(state);
+                    Students = nextState.Students,
+                    EquipmentItems = nextState.EquipmentItems,
+                    Loans = prevState?.Loans?.Any() == true ? prevState.Loans : nextState.Loans
+                } as IGoogleSheetKioskState));
             }
             catch (Exception error)
             {
-                _logger.LogError(error, "Unhandled exception when synchronizing google sheet {}", _sheetId);
+                _logger.LogError(error, "Unhandled exception when synchronizing students and equipment items from google sheet");
             }
 
-            _executionCount += 1;
-            _timer?.Change(_syncInterval.Milliseconds, Timeout.Infinite);
+            _timer?.Change((int)_syncInterval.TotalMilliseconds, Timeout.Infinite);
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Starting syncrhonization of google sheet {}", _sheetId);
+            _logger.LogInformation("Attempting to connect to google sheets API");
+            
+
+            _logger.LogInformation("Starting syncrhonization of kiosk google sheet.");
             _timer = new Timer(PerformSynchronization, null, 0, Timeout.Infinite);
             return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Stopping synchronization of google sheet {}", _sheetId);
+            _logger.LogInformation("Stopping synchronization of kiosk google sheet.");
             _timer?.Change(Timeout.Infinite, 0);
             return Task.CompletedTask;
         }
@@ -78,6 +70,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
         public void Dispose()
         {
             _timer?.Dispose();
+            _kioskSheetReaderWriter?.Dispose();
         }
     }
 }

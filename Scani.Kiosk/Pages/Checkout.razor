@@ -65,8 +65,16 @@
         if (_cart == null) return;
         if (!ActiveUserState.HasActiveUser || ActiveUserState.UserInfo == null) return;
 
-        await KioskBackend.MarkLoanedEquipmentAsReturnedByUserAsync(ActiveUserState.UserInfo.Id, _cart.ReturnedEquipmentIds);
-        await KioskBackend.CheckoutEquipmentAsUserAsync(ActiveUserState.UserInfo.Id, _cart.RequestedEquipmentIds);
+        if (_cart.ReturnedEquipmentIds.Any())
+        {
+            await KioskBackend.MarkLoanedEquipmentAsReturnedByUserAsync(ActiveUserState.UserInfo.Id, _cart.ReturnedEquipmentIds.ToList());
+        }
+
+        if (_cart.RequestedEquipmentIds.Any())
+        {
+            await KioskBackend.CheckoutEquipmentAsUserAsync(ActiveUserState.UserInfo.Id, _cart.RequestedEquipmentIds.ToList());
+        }
+
         NavigationManager.NavigateTo("/");
     }
 }

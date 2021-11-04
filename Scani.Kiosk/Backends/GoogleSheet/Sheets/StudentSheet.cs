@@ -1,28 +1,25 @@
 ﻿using OfficeOpenXml;
-using static Scani.Kiosk.Backends.GoogleSheet.GoogleSheetKioskState;
+using static Scani.Kiosk.Backends.GoogleSheet.SynchronizedGoogleSheetKioskState;
 
 namespace Scani.Kiosk.Backends.GoogleSheet
 {
-    public static class StudentSheetParser
+    public static class StudentSheet
     {
-        private const int CUSTOM_FIELD_HEADER_ROW = 2;
-        private const int FIRST_CUSTOM_FIELD_HEADER_COL = 6;
+        private const int CUSTOM_FIELD_HEADER_ROW = 1;
+        private const int FIRST_CUSTOM_FIELD_HEADER_COL = 5;
         private const int FIRST_DATA_ROW = 2;
-        private const int LAST_DATA_COL = 5;
+        private const int LAST_DATA_COL = 4;
 
-        public static SheetParseResult<Student> ParseStudentsFromWorksheet(ILogger logger, ExcelWorksheet? worksheet)
+        public static SheetReadResult<Student> ReadStudents(ILogger logger, IList<IList<object>> cells)
         {
-            var result = new SheetParseResult<Student>();
-
-            if (worksheet == null) return result;
+            var result = new SheetReadResult<Student>();
 
             var customFieldNames = new HashSet<string>();
-            for (int col = FIRST_CUSTOM_FIELD_HEADER_COL; true; col++)
+            for (int col = FIRST_CUSTOM_FIELD_HEADER_COL; col < cells[CUSTOM_FIELD_HEADER_ROW].Count; col++)
             {
                 try
                 {
-                    var cell = worksheet.Cells[CUSTOM_FIELD_HEADER_ROW, col];
-                    var name = cell.GetValue<string>();
+                    var name = cells[CUSTOM_FIELD_HEADER_ROW][col] as string;
                     if (string.IsNullOrWhiteSpace(name))
                     {
                         break;
@@ -37,15 +34,15 @@ namespace Scani.Kiosk.Backends.GoogleSheet
                 }
             }
 
-            for (int row = FIRST_DATA_ROW + 1; row < worksheet.Dimension.Rows; row++)
+            for (int row = FIRST_DATA_ROW; row < cells.Count; row++)
             {
                 var stop = false;
                 try
                 {
                     var isRowEmpty = true;
-                    for (int col = 1; isRowEmpty && col <= LAST_DATA_COL; col++)
+                    for (int col = 0; isRowEmpty && col <= LAST_DATA_COL; col++)
                     {
-                        isRowEmpty &= string.IsNullOrWhiteSpace(worksheet.Cells[row, col].GetValue<string?>());
+                        isRowEmpty &= string.IsNullOrWhiteSpace(cells[row][col] as string);
                     }
 
                     if (isRowEmpty)
@@ -66,7 +63,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
 
                 try
                 {
-                    var fullName = worksheet.Cells[row, 2].GetValue<string>();
+                    var fullName = cells[row][0] as string;
                     if (string.IsNullOrWhiteSpace(fullName))
                     {
                         result.Errors.Add($"No full name entered for student on row {row}");
@@ -74,7 +71,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
                         continue;
                     }
 
-                    var displayName = worksheet.Cells[row, 1].GetValue<string>();
+                    var displayName = cells[row][1] as string;
                     if (string.IsNullOrWhiteSpace(displayName))
                     {
                         result.Warnings.Add($"No display name entered for student on row {row} defaulting to using full name");
@@ -82,15 +79,15 @@ namespace Scani.Kiosk.Backends.GoogleSheet
                         displayName = fullName;
                     }
 
-                    var email = worksheet.Cells[row, 3].GetValue<string>();
+                    var email = cells[row][2] as string;
                     if (string.IsNullOrWhiteSpace(email))
                     {
                         result.Warnings.Add($"No email entered for student '{fullName}' on row {row}");
                         logger.LogWarning("No email entered for student on row {}", row);
                     }
 
-                    var customScancode = worksheet.Cells[row, 4].GetValue<string?>();
-                    var generatedScancode = worksheet.Cells[row, 5].GetValue<string>();
+                    var customScancode = cells[row][3] as string;
+                    var generatedScancode = cells[row][4] as string;
                     if (string.IsNullOrWhiteSpace(generatedScancode))
                     {
                         result.Errors.Add($"No generated scancode present for student '{fullName}' on row {row}");
@@ -107,9 +104,14 @@ namespace Scani.Kiosk.Backends.GoogleSheet
                     var customFields = customFieldNames.ToDictionary(n => n, _ => (string?)null);
                     foreach (var (i, fieldName) in customFieldNames.Select((n, i) => (i, n)))
                     {
+                        if (cells[row].Count - 1 <= FIRST_CUSTOM_FIELD_HEADER_COL + i)
+                        {
+                            break;
+                        }
+
                         try
                         {
-                            customFields[fieldName] = worksheet.Cells[row, FIRST_CUSTOM_FIELD_HEADER_COL + i].GetValue<string>();
+                            customFields[fieldName] = cells[row][FIRST_CUSTOM_FIELD_HEADER_COL + i] as string;
                         }
                         catch (Exception error)
                         {
@@ -119,7 +121,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
                         }
                     }
 
-                    result.Values.Add(new Student(displayName, fullName, email, generatedScancode)
+                    result.Values.Add(new Student(displayName, fullName, email!, (customScancode ?? generatedScancode)!, row + 1)
                     {
                         CustomScancode = customScancode,
                         CustomFields = customFields

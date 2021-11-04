@@ -1,5 +1,10 @@
-﻿using Scani.Kiosk.Shared;
+﻿using Google.Apis.Sheets.v4;
+using Scani.Kiosk.Backends.GoogleSheet.Sheets;
+using Scani.Kiosk.Helpers;
+using Scani.Kiosk.Shared;
 using Scani.Kiosk.Shared.Models;
+using System.Linq;
+using static Scani.Kiosk.Backends.GoogleSheet.SynchronizedGoogleSheetKioskState;
 
 namespace Scani.Kiosk.Backends.GoogleSheet
 {
@@ -7,82 +12,125 @@ namespace Scani.Kiosk.Backends.GoogleSheet
     {
         private readonly ILogger<GoogleSheetKioskBackend> _logger;
         private readonly TaskCompletionSource _initialStateLoadedTcs = new TaskCompletionSource();
-        private readonly GoogleSheetSynchronizer _sheetSynchronizer;
-        private GoogleSheetKioskState? _state;
+        private SynchronizedGoogleSheetKioskState _kioskState;
+        private readonly string _sheetId;
+        private LazyAsyncThrottledAccessor<SheetsService> _sheetsAccessor;
         private Task _loaded => _initialStateLoadedTcs.Task;
 
-        public GoogleSheetKioskBackend(ILogger<GoogleSheetKioskBackend> logger, GoogleSheetSynchronizer sheetSyncronizer)
+        public GoogleSheetKioskBackend(
+                ILogger<GoogleSheetKioskBackend> logger,
+                IConfiguration configuration,
+                SynchronizedGoogleSheetKioskState kioskState,
+                LazyAsyncThrottledAccessor<SheetsService> sheetsAccessor)
         {
-            _logger = logger;
-            _sheetSynchronizer = sheetSyncronizer;
-            _sheetSynchronizer.StateChanged += HandleStateChanged;
+            this._logger = logger;
+            this._kioskState = kioskState;
+            this._sheetId = configuration.GetValue<string>("GoogleSheet:SheetId");
+            this._sheetsAccessor = sheetsAccessor;
         }
 
-        private void HandleStateChanged(GoogleSheetKioskState state)
+        public async Task CheckoutEquipmentAsUserAsync(string userId, IEnumerable<string> equipmentIds)
         {
-            _logger.LogTrace("Kiosk backend updated with new google sheet state");
-            _state = state;
+            var now = DateTime.Now;
+            var loanRequests = equipmentIds.Select(equipmentId => new LoanRequest(userId, equipmentId, now));
 
-            if (!_initialStateLoadedTcs.Task.IsCompleted)
+            var loanRequestWriteResults = await _kioskState.ReadStateAsync(async currState =>
             {
-                _initialStateLoadedTcs.SetResult();
-            }
+                if (currState == null) throw new InvalidOperationException();
+
+                return await LoanSheet.AddLoans(_logger, _sheetsAccessor, currState.Loans.Count, _sheetId, loanRequests);
+            });
+
+            await _kioskState.ReduceStateAsync(prevState => Task.FromResult(new GoogleSheetKioskState
+            {
+                Students = prevState?.Students ?? Enumerable.Empty<Student>().ToList(),
+                EquipmentItems = prevState?.EquipmentItems ?? Enumerable.Empty<EquipmentItem>().ToList(),
+                Loans = (prevState?.Loans ?? Enumerable.Empty<Loan>())
+                    .Concat(loanRequestWriteResults.Where(r => r.Ok && r.Value != null).Select(r => r.Value!))
+                    .ToList()
+            } as IGoogleSheetKioskState));
         }
 
-        public Task CheckoutEquipmentAsUserAsync(string userId, IEnumerable<string> equipmentIds)
+        public async Task<List<EquipmentInfo>> GetAllAvailableEquipmentAsync()
         {
-            throw new NotImplementedException();
+            return await _kioskState.ReadStateAsync(state => Task.FromResult(state.EquipmentItems
+                    .Where(e =>
+                        !state.Loans.Any(l => !l.ReturnedDate.HasValue && l.EquipmentScancode == e.Scancode))
+                    .Select(e => new EquipmentInfo(e.Scancode, e.Name))
+                    .ToList()));
         }
 
-        public async Task<IEnumerable<EquipmentInfo>> GetAllAvailableEquipmentAsync()
+        public Task<List<EquipmentInfo>> GetAllEquipmentAsync()
         {
-            await _loaded;
-            var state = _state;
-            return state!.EquipmentItems.Select(e => new EquipmentInfo(e.GeneratedScancode, e.Name)).ToList();
+            return _kioskState.ReadStateAsync(state => Task.FromResult(state.EquipmentItems
+                    .Select(e => new EquipmentInfo(e.Scancode, e.Name))
+                    .ToList()));
         }
 
-        public async Task<IEnumerable<EquipmentInfo>> GetAllEquipmentAsync()
+        public Task<EquipmentInfo?> GetEquipmentByScancodeAsync(string scancode)
         {
-            await _loaded;
-            var state = _state;
-            return state!.EquipmentItems.Select(e => new EquipmentInfo(e.GeneratedScancode, e.Name)).ToList();
+            return _kioskState.ReadStateAsync(state => Task.FromResult(state.EquipmentItems
+                    .Where(e => e.Scancode == scancode)
+                    .Select(e => new EquipmentInfo(e.Scancode, e.Name))
+                    .FirstOrDefault()));
         }
 
-        public async Task<EquipmentInfo?> GetEquipmentByScancodeAsync(string scancode)
+        public Task<List<EquipmentInfo>> GetEquipmentLoanedToUserAsync(string userId)
         {
-            await _loaded;
-            var state = _state;
-            return state!.EquipmentItems
-                .Where(e => e.CustomScancode == scancode || e.GeneratedScancode == scancode)
-                .Select(e => new EquipmentInfo(e.GeneratedScancode, e.Name))
-                .FirstOrDefault();
+            return _kioskState.ReadStateAsync(state => Task.FromResult(state.EquipmentItems
+                    .Where(e => state.Loans
+                        .Any(l => !l.ReturnedDate.HasValue && l.StudentScancode == userId && l.EquipmentScancode == e.Scancode))
+                    .Select(e => new EquipmentInfo(e.Scancode, e.Name))
+                    .ToList()));
         }
 
-        public async Task<IEnumerable<EquipmentInfo>> GetEquipmentLoanedToUserAsync(string userId)
+        public Task<UserInfo?> GetUserByScancodeAsync(string scancode)
         {
-            await _loaded;
-            var state = _state;
-            return state!.EquipmentItems.Select(e => new EquipmentInfo(e.GeneratedScancode, e.Name)).ToList();
-        }
-
-        public async Task<UserInfo?> GetUserByScancodeAsync(string scancode)
-        {
-            await _loaded;
-            var state = _state;
-            return state!.Students
-                .Where(e => e.CustomScancode == scancode || e.GeneratedScancode == scancode)
-                .Select(e => new UserInfo(e.GeneratedScancode, e.DisplayName, false))
-                .FirstOrDefault();
+            return _kioskState.ReadStateAsync(state => Task.FromResult(state.Students
+                    .Where(s => s.Scancode == scancode)
+                    .Select(e => new UserInfo(e.Scancode, e.DisplayName, false))
+                    .FirstOrDefault()));
         }
 
         public async Task MarkLoanedEquipmentAsReturnedByUserAsync(string userId, IEnumerable<string> equipmentIds)
         {
-            throw new NotImplementedException();
+            var now = DateTime.Now;
+
+            var deletedLoansWriteResult = await _kioskState.ReadStateAsync(async currState =>
+            {
+                if (currState == null) throw new InvalidOperationException();
+
+                var loans = currState.Loans
+                    .Where(l => !l.ReturnedDate.HasValue
+                                && l.StudentScancode == userId
+                                && equipmentIds.Contains(l.EquipmentScancode, StringComparer.OrdinalIgnoreCase))
+                    .ToList();
+
+                return await LoanSheet.DeleteLoans(_logger, _sheetsAccessor, _sheetId, loans);
+            });
+
+            await _kioskState.ReduceStateAsync(prevState => Task.FromResult(new GoogleSheetKioskState
+            {
+                Students = prevState?.Students ?? Enumerable.Empty<Student>().ToList(),
+                EquipmentItems = prevState?.EquipmentItems ?? Enumerable.Empty<EquipmentItem>().ToList(),
+                Loans = (prevState?.Loans ?? Enumerable.Empty<Loan>())
+                    .Select(l =>
+                    {
+                        var matchingDeletedLoan = deletedLoansWriteResult
+                            .SingleOrDefault(r => r.Ok && r.Value != null && r.Value.Id == l.Id);
+                        return matchingDeletedLoan switch
+                        {
+                            null => l,
+                            SheetWriteResult<Loan> r => r.Value!
+                        };
+                    })
+                    .ToList()
+            } as IGoogleSheetKioskState));
         }
 
         public void Dispose()
         {
-            _sheetSynchronizer.StateChanged -= HandleStateChanged;
+            _sheetsAccessor?.Dispose();
         }
     }
 }

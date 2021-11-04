@@ -1,8 +1,6 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using Scani.Kiosk.Backends;
+using Google.Apis.Sheets.v4;
 using Scani.Kiosk.Backends.GoogleSheet;
-using Scani.Kiosk.Data;
+using Scani.Kiosk.Helpers;
 using Scani.Kiosk.Services;
 using Scani.Kiosk.Shared;
 
@@ -14,7 +12,12 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddScoped<ActiveUserService>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IKioskBackend, GoogleSheetKioskBackend>();
-builder.Services.AddSingleton<GoogleSheetSynchronizer>(s => new GoogleSheetSynchronizer(s.GetRequiredService<ILogger<GoogleSheetSynchronizer>>(), "1WT6kELSGHp6QUQo_K7KCSMyGMzYONt7Bzfpt5ETTO9I", TimeSpan.FromMinutes(1)));
+builder.Services.AddSingleton<GoogleSheetSynchronizer>();
+builder.Services.AddSingleton<ThrottledKioskSheetAccessorFactory>();
+builder.Services.AddSingleton<LazyAsyncThrottledAccessor<SheetsService>>(services =>
+    services.GetRequiredService<ThrottledKioskSheetAccessorFactory>().CreateAccessor(100, TimeSpan.FromMinutes(1)));
+builder.Services.AddSingleton<KioskSheetReaderWriter>();
+builder.Services.AddSingleton<SynchronizedGoogleSheetKioskState>();
 builder.Services.AddHostedService<GoogleSheetSynchronizer>(s => s.GetRequiredService<GoogleSheetSynchronizer>());
 
 var app = builder.Build();

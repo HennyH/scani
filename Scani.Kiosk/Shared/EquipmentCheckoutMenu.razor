@@ -1,5 +1,6 @@
 ﻿@implements IDisposable
 @inject IKioskBackend KioskBackend
+@inject Scani.Kiosk.Backends.GoogleSheet.GoogleSheetSynchronizer SheetSynchronizer
 
 <KeySequenceReader OnKeySequenceEntered="@HandleKeySequenceEntered" />
 
@@ -106,16 +107,10 @@
     private IEnumerable<EquipmentInfo>? _loanedEquipment = null;
     private string _scancode = string.Empty;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        var availableEquipmentTask = KioskBackend.GetAllAvailableEquipmentAsync();
-        var loanedEquipmentTask = KioskBackend.GetEquipmentLoanedToUserAsync(ActiveUserState.UserInfo!.Id);
-        Task.WhenAll(availableEquipmentTask, loanedEquipmentTask).ContinueWith(_ =>
-        {
-            _availableEquipment = availableEquipmentTask.Result;
-            _loanedEquipment = loanedEquipmentTask.Result;
-            InvokeAsync(StateHasChanged);
-        });
+        _availableEquipment = await KioskBackend.GetAllAvailableEquipmentAsync();
+        _loanedEquipment = await KioskBackend.GetEquipmentLoanedToUserAsync(ActiveUserState.UserInfo!.Id);
 
         _cart.OnCartChanged += HandleCartChanged;
     }
