@@ -1,0 +1,84 @@
+﻿@implements IDisposable
+@inject SynchronizedKioskState KioskState
+
+<button type="button" class="btn status-btn" data-bs-toggle="modal" data-bs-target="#status-modal" style="justify-self: flex-end">
+    <img src="@(_ok ? "/assets/images/okay.svg" : "/assets/images/error.svg")" style="width: 50px" />
+    @if (_lastUpdated.HasValue)
+    {
+        <span style="margin-left: 0.5em">Last Updated @(_lastUpdated.Value.ToShortTimeString())</span>
+    }
+</button>
+
+<div class="modal" id="status-modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Kiosk Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Students</h6>
+                <ul>
+                    @foreach (var error in _studentErrors)
+                    {
+                        <li>@error.Message</li>
+                    }
+                </ul>
+                <h6>Equipment</h6>
+                <ul>
+                    @foreach (var error in _equipmentErrors)
+                    {
+                        <li>@error.Message</li>
+                    }
+                </ul>
+                <h6>Loans</h6>
+                <ul>
+                    @foreach (var error in _loanErrors)
+                    {
+                        <li>@error.Message</li>
+                    }
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<KioskSheetReadError> _loanErrors = new List<KioskSheetReadError>();
+    private List<KioskSheetReadError> _studentErrors = new List<KioskSheetReadError>();
+    private List<KioskSheetReadError> _equipmentErrors = new List<KioskSheetReadError>();
+    private bool _ok => !_loanErrors.Any() && !_studentErrors.Any() && !_equipmentErrors.Any();
+    private DateTime? _lastUpdated = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await KioskState.ReadStateAsync(async state =>
+        {
+            _loanErrors = state.LoanSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
+            _studentErrors = state.StudentsSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
+            _equipmentErrors = state.EquipmentSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
+            _lastUpdated = state.LastModified;
+        });
+        KioskState.StateChanged += HandleKioskStateChanged;
+    }
+
+    protected async void HandleKioskStateChanged()
+    {
+        await KioskState.ReadStateAsync(async state =>
+        {
+            _loanErrors = state.LoanSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
+            _studentErrors = state.StudentsSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
+            _equipmentErrors = state.EquipmentSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
+            _lastUpdated = state.LastModified;
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    public void Dispose()
+    {
+        KioskState.StateChanged -= HandleKioskStateChanged;
+    }
+}

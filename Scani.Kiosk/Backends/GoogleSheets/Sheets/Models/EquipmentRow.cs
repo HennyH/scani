@@ -28,7 +28,7 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
         [Column("Generated Scancode*", Order = 3)]
         public string GeneratedScancode { get; set; }
 
-        public string Scancode => CustomScancode ?? GeneratedScancode;
+        public string Scancode => string.IsNullOrWhiteSpace(CustomScancode) ? GeneratedScancode : CustomScancode;
 
         public string Range { get; set; }
 

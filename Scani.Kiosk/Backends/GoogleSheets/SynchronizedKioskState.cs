@@ -10,6 +10,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
         public KioskSheetReadResult<StudentRow>? StudentsSheet { get; set; }
         public KioskSheetReadResult<EquipmentRow>? EquipmentSheet { get; set; }
         public KioskSheetReadResult<LoanRow>? LoanSheet { get; set; }
+        public DateTime? LastModified { get; set; }
 
         public IEnumerable<EquipmentRow> Equipment => EquipmentSheet?.Rows?.ToList() ?? new List<EquipmentRow>();
         public IEnumerable<StudentRow> Students => StudentsSheet?.Rows?.ToList() ?? new List<StudentRow>();
@@ -40,7 +41,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
 
         public StudentRow? StudentWithScancode(string studentScancode) => StudentsSheet
             ?.Rows
-            ?.SingleOrDefault(s => s.Scancode == studentScancode);
+            ?.SingleOrDefault(s => s.Email == studentScancode || s.Scancode == studentScancode);
 
         public IEnumerable<LoanRow> ActiveLoansForUser(string userScancode) => LoanSheet
             ?.Rows
@@ -88,12 +89,14 @@ namespace Scani.Kiosk.Backends.GoogleSheet
             try
             {
                 _state = await reducer(_state);
-                StateChanged?.Invoke();
+                _state.LastModified = DateTime.Now;
             }
             finally
             {
                 await writeLock.ReleaseAsync();
             }
+
+            StateChanged?.Invoke();
         }
 
         public void Dispose()

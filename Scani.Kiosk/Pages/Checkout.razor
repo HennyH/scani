@@ -72,7 +72,7 @@
     protected async Task HandleCheckout()
     {
         if (_cart == null) return;
-        if (!ActiveUserState.HasActiveUser || ActiveUserState.UserInfo == null) return;
+        if (!ActiveUserState.HasActiveUser || ActiveUserState.User == null) return;
 
         var now = DateTime.Now;
 
@@ -81,7 +81,7 @@
             await KioskState.ReadStateAsync(async state =>
             {
                 var loansToUpdate = new List<LoanRow>();
-                foreach (var loan in state.ActiveLoansForUser(ActiveUserState.UserInfo.Id))
+                foreach (var loan in state.ActiveLoansForUser(ActiveUserState.User.Scancode))
                 {
                     if (_cart.ReturnedEquipmentIds.Contains(loan.EquipmentScancode))
                     {
@@ -100,7 +100,7 @@
             {
                 var newLoans = _cart.RequestedEquipmentIds
                     .Select(equipmentScancode
-                        => new LoanRow(ActiveUserState.UserInfo.Id, equipmentScancode, now.ToString(), state.LoanSheet))
+                        => new LoanRow(ActiveUserState.User.Scancode, equipmentScancode, now.ToString(), state.LoanSheet))
                     .ToList();
 
                 foreach (var loan in newLoans)

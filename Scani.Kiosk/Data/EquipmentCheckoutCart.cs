@@ -1,5 +1,4 @@
 ﻿using Scani.Kiosk.Backends.GoogleSheets.Sheets.Models;
-using Scani.Kiosk.Shared.Models;
 
 namespace Scani.Kiosk.Data;
 

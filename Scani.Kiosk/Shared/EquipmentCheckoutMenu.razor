@@ -110,7 +110,7 @@
     protected override async Task OnInitializedAsync()
     {
         _availableEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.AvailableEquipment));
-        _loanedEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.EquipmentLoanedToUser(ActiveUserState.UserInfo!.Id)));
+        _loanedEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.EquipmentLoanedToUser(ActiveUserState.User!.Scancode)));
 
         _cart.OnCartChanged += HandleCartChanged;
     }

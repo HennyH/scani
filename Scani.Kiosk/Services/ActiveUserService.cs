@@ -1,27 +1,27 @@
-﻿using Scani.Kiosk.Shared.Models;
+﻿using Scani.Kiosk.Backends.GoogleSheets.Sheets.Models;
 
 namespace Scani.Kiosk.Services;
 
 public record ActiveUserState
 {
-    public ActiveUserState(UserInfo userInfo)
+    public ActiveUserState(StudentRow userInfo)
     {
-        IsAdmin = userInfo.IsAdmin;
-        IsStudent = userInfo.IsStudent;
-        UserInfo = userInfo;
+        IsAdmin = false;
+        IsStudent = true;
+        User = userInfo;
     }
 
     public ActiveUserState()
     {
         IsAdmin = false;
         IsStudent = false;
-        UserInfo = null;
+        User = null;
     }
 
-    public bool HasActiveUser => UserInfo != null;
+    public bool HasActiveUser => User != null;
     public bool IsAdmin { get; }
     public bool IsStudent { get; }
-    public UserInfo? UserInfo { get; }
+    public StudentRow? User { get; }
 }
 
 public class ActiveUserService
@@ -29,7 +29,7 @@ public class ActiveUserService
     public ActiveUserState ActiveUserState { get; private set; } = new ActiveUserState();
     public event Action<ActiveUserState>? ActiveUserChanged;
 
-    public void SetActiveUser(UserInfo userInfo)
+    public void SetActiveUser(StudentRow userInfo)
     {
         ActiveUserState = new ActiveUserState(userInfo);
         ActiveUserChanged?.Invoke(ActiveUserState);

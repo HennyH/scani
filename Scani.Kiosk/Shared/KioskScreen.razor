@@ -1,23 +1,41 @@
-﻿<div id="kiosk-screen">
+﻿@implements IDisposable
+@inject SynchronizedKioskState KioskState
+
+<div id="kiosk-screen">
     <header>
         <h1>@Title</h1>
-        @if (ActiveUserState.UserInfo != null)
+        @if (ActiveUserState.User != null)
         {
-            <p>Welcome <span class="name">@ActiveUserState.UserInfo.DisplayName</span></p>
+            <p>Welcome <span class="name">@ActiveUserState.User.DisplayName</span></p>
         }
         else
         {
             <p>Welcome Anon!</p>
         }
-    </header>
-    <main>
-        @if (ActiveUserState.HasActiveUser)
+        @if (_loaded)
         {
-            @Screen
+            <StatusIndicator />
         }
         else
         {
-            <LoginMenu />
+            <LoadingSpinner />
+        }
+    </header>
+    <main style="@(_loaded ? "" : "display: grid; justify-items: center; align-items: center")">
+        @if (_loaded)
+        {
+            @if (ActiveUserState.HasActiveUser)
+            {
+                @Screen
+            }
+            else
+            {
+                <LoginMenu />
+            }
+        }
+        else
+        {
+            <LoadingSpinner />
         }
     </main>
     <footer>
@@ -34,4 +52,33 @@
     [Parameter] public RenderFragment? Footer { get; set; }
     [Parameter] public RenderFragment? Screen { get; set; }
     [CascadingParameter] public ActiveUserState ActiveUserState { get; set; } = null!;
+    private bool _loaded = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        base.OnInitialized();
+        await KioskState.ReadStateAsync(async state =>
+        {
+            _loaded = state.StudentsSheet != null
+                      && state.EquipmentSheet != null
+                      && state.LoanSheet != null;
+        });
+        KioskState.StateChanged += HandleKioskStateChanged;
+    }
+
+    private async void HandleKioskStateChanged()
+    {
+        await KioskState.ReadStateAsync(async state =>
+        {
+            _loaded = state.StudentsSheet != null
+                      && state.EquipmentSheet != null
+                      && state.LoanSheet != null;
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    public void Dispose()
+    {
+        KioskState.StateChanged -= HandleKioskStateChanged;
+    }
 }
