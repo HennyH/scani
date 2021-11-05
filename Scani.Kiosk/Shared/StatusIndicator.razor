@@ -1,7 +1,7 @@
 ﻿@implements IDisposable
 @inject SynchronizedKioskState KioskState
 
-<button type="button" class="btn status-btn" data-bs-toggle="modal" data-bs-target="#status-modal" style="justify-self: flex-end">
+<button type="button" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#status-modal" style="justify-self: flex-end; margin-right: 1em;">
     <img src="@(_ok ? "/assets/images/okay.svg" : "/assets/images/error.svg")" style="width: 50px" />
     @if (_lastUpdated.HasValue)
     {
@@ -17,27 +17,47 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <h6>Students</h6>
-                <ul>
-                    @foreach (var error in _studentErrors)
-                    {
-                        <li>@error.Message</li>
-                    }
-                </ul>
-                <h6>Equipment</h6>
-                <ul>
-                    @foreach (var error in _equipmentErrors)
-                    {
-                        <li>@error.Message</li>
-                    }
-                </ul>
-                <h6>Loans</h6>
-                <ul>
-                    @foreach (var error in _loanErrors)
-                    {
-                        <li>@error.Message</li>
-                    }
-                </ul>
+                @if (_ok)
+                {
+                    <p>Everything looks good - well done!</p>
+                }
+                else
+                {
+                    <h5 style="text-align: center">Errors</h5>
+                }
+
+                @if (_studentErrors.Any())
+                {
+                    <h6>Students</h6>
+                    <ul>
+                        @foreach (var error in _studentErrors)
+                        {
+                            <li>@error.Message</li>
+                        }
+                    </ul>
+                }
+
+                @if (_equipmentErrors.Any())
+                {
+                    <h6>Equipment</h6>
+                    <ul>
+                        @foreach (var error in _equipmentErrors)
+                        {
+                            <li>@error.Message</li>
+                        }
+                    </ul>
+                }
+
+                @if (_loanErrors.Any())
+                {
+                    <h6>Loans</h6>
+                    <ul>
+                        @foreach (var error in _loanErrors)
+                        {
+                            <li>@error.Message</li>
+                        }
+                    </ul>
+                }
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>

@@ -32,7 +32,10 @@
         _loginErrorMessage = user == null
             ? "User not found"
             : null;
-        if (user != null) ActiveUserService.SetActiveUser(user);
-        NavigationManager.NavigateTo("/checkout");
+        if (user != null)
+        {
+            ActiveUserService.SetActiveUser(user);
+            NavigationManager.NavigateTo("/checkout");
+        }
     }
 }

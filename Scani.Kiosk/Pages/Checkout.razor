@@ -13,10 +13,10 @@
     <Footer>
         <div class="footer">
             <LogoutButton OnLogout="ResetCart" />
-            <button disabled="@(_cart == null || _cart.IsEmpty)" @onclick="HandleCheckout">
+            <button class="btn btn-success" disabled="@(_cart == null || _cart.IsEmpty)" @onclick="HandleCheckout">
                 @if (!(_cart == null || _cart.IsEmpty))
                 {
-                    <img src="/assets/images/tickets.svg" style="height: 60px" />
+                    <img src="/assets/images/tickets.svg" style="height: 50px; margin-left: -0.5em;" />
                 }
                 @_checkoutButtonText
             </button>

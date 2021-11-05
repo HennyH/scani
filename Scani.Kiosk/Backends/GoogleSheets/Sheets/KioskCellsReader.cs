@@ -180,17 +180,20 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                             var generatedScancode = itemWithScancode.GeneratedScancode;
                             var customScancode = itemWithScancode.CustomScancode;
                             ulong generatedScancodeAsNumber = 0;
+                            ulong? expectedGeneratedScancode = firstGeneratedScancode == null
+                                ? null
+                                : firstGeneratedScancode.Value + (ulong)(dataRowNumber - (dataHeaderRowNumber + 1));
 
                             if (string.IsNullOrWhiteSpace(generatedScancode) || !Regex.IsMatch(generatedScancode, @"^\d+$"))
                             {
                                 result.Errors.Add(new InvalidGeneratedScancode(sheetName, generatedScancode, dataRowNumber));
                                 isValidRow = false;
                             }
-                            else if (firstGeneratedScancode.HasValue
+                            else if (expectedGeneratedScancode.HasValue
                                      && ulong.TryParse(generatedScancode, out generatedScancodeAsNumber)
-                                     && generatedScancodeAsNumber != firstGeneratedScancode.Value + (ulong)(dataRowNumber - (dataHeaderRowNumber + 1)))
+                                     && generatedScancodeAsNumber != expectedGeneratedScancode)
                             {
-                                result.Errors.Add(new NonSequentialGeneratedScancodes(sheetName, dataRowNumber, firstGeneratedScancode.Value + (ulong)(dataRowNumber - dataHeaderRowNumber), generatedScancodeAsNumber));
+                                result.Errors.Add(new NonSequentialGeneratedScancodes(sheetName, dataRowNumber, expectedGeneratedScancode.Value, generatedScancodeAsNumber));
                                 isValidRow = false;
                             }
                             else if (generatedScancodes.Contains(generatedScancode))

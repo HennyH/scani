@@ -3,22 +3,19 @@
 
 <div id="kiosk-screen">
     <header>
-        <h1>@Title</h1>
-        @if (ActiveUserState.User != null)
-        {
-            <p>Welcome <span class="name">@ActiveUserState.User.DisplayName</span></p>
-        }
-        else
-        {
-            <p>Welcome Anon!</p>
-        }
+        <h1 style="margin: 0 auto;">@Title</h1>
+
+        <p style="margin: 0 auto;">Welcome, <span class="name">@(ActiveUserState.User?.DisplayName ?? "Anon")</span>!</p>
+
         @if (_loaded)
         {
             <StatusIndicator />
         }
         else
         {
-            <LoadingSpinner />
+            <div style="justify-self: flex-end; margin-right: 1em;">
+                <LoadingSpinner />
+            </div>
         }
     </header>
     <main style="@(_loaded ? "" : "display: grid; justify-items: center; align-items: center")">
