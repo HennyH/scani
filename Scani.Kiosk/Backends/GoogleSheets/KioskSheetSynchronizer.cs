@@ -69,7 +69,6 @@ namespace Scani.Kiosk.Backends.GoogleSheet
         public void Dispose()
         {
             _timer?.Dispose();
-            _kioskSheetReaderWriter?.Dispose();
         }
     }
 }

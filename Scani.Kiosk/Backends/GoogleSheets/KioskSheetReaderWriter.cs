@@ -7,7 +7,7 @@ using Google.Apis.Util;
 
 namespace Scani.Kiosk.Backends.GoogleSheet
 {
-    public class KioskSheetReaderWriter : IDisposable
+    public class KioskSheetReaderWriter
     {
         private readonly AsyncReaderWriterLock _sheetLock = new();
         private readonly ILogger<KioskSheetReaderWriter> _logger;
@@ -113,11 +113,6 @@ namespace Scani.Kiosk.Backends.GoogleSheet
             {
                 await writeLock.ReleaseAsync();
             }
-        }
-
-        public void Dispose()
-        {
-            _sheetsAccessor.Dispose();
         }
     }
 }

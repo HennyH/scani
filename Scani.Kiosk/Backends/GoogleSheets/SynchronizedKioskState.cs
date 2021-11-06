@@ -15,8 +15,8 @@ namespace Scani.Kiosk.Backends.GoogleSheet
         public IEnumerable<EquipmentRow> Equipment => EquipmentSheet?.Rows?.ToList() ?? new List<EquipmentRow>();
         public IEnumerable<StudentRow> Students => StudentsSheet?.Rows?.ToList() ?? new List<StudentRow>();
         public IEnumerable<LoanRow> Loans => LoanSheet?.Rows?.ToList() ?? new List<LoanRow>();
-
-        public IEnumerable<EquipmentRow> AvailableEquipment => EquipmentSheet
+        public IEnumerable<LoanRow> ActiveLoans => Loans.Where(l => !l.ReturnedDate.HasValue).ToList();
+        public IEnumerable<EquipmentRow> UnloanedEquipment => EquipmentSheet
             ?.Rows
             ?.Where(e =>
                 LoanSheet != null

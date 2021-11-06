@@ -15,19 +15,18 @@
     <ol class="equipment-pools">
         <li class="equipment-pool">
             <h2><img src="/assets/images/shop.svg" style="height: 80px" /> Available</h2>
-            @if (_availableEquipment != null)
+            @if (_unloanedEquipment != null)
             {
                 <div class="equipment-list">
                     <ul>
-                        @foreach (var equipment in _availableEquipment)
+                        @foreach (var equipment in _unloanedEquipment)
                         {
-                            @if (_cart.IsInCart(equipment))
+                            @if (IsEquipmentAvailableForTaking(equipment))
                             {
-                                continue;
+                                <li @key="@equipment.Scancode">
+                                    <EquipmentCard Equipment="@equipment" ActionName="Add to Cart" OnAction="e => _cart.ToggleTake(e)" />
+                                </li>
                             }
-                            <li @key="@equipment.Scancode">
-                                <EquipmentCard Equipment="@equipment" ActionName="Add to Cart" OnAction="AddItemToCart" />
-                            </li>
                         }
                     </ul>
                 </div>
@@ -39,29 +38,43 @@
         </li>
         <li class="equipment-pool">
             <h2><img src="/assets/images/basket.svg" style="height: 80px" />Cart</h2>
-            @if (_cart.RequestedEquipment.Any())
+            @if (_cart.Takes.Any())
             {
                 <div class="equipment-list">
-                    <h3>Take</h3>
+                    <h3>Takes</h3>
                     <ul class="equipment-list">
-                        @foreach (var equipment in _cart.RequestedEquipment)
+                        @foreach (var equipment in _cart.Takes)
                         {
                             <li @key="@equipment.Scancode">
-                                <EquipmentCard Equipment="@equipment" ActionName="Remove from Cart" OnAction="RemoteItemFromCart" />
+                                <EquipmentCard Equipment="@equipment" ActionName="Remove from Cart" OnAction="e => _cart.ToggleTake(e)" />
                             </li>
                         }
                     </ul>
                 </div>
             }
-            @if (_cart.ReturnedEquipment.Any())
+            @if (_cart.SelfReturns.Any())
             {
                 <div class="equipment-list">
-                    <h3>Return</h3>
+                    <h3>Self Returns</h3>
                     <ul class="equipment-list">
-                        @foreach (var equipment in _cart.ReturnedEquipment)
+                        @foreach (var equipment in _cart.SelfReturns)
                         {
                             <li @key="@equipment.Scancode">
-                                <EquipmentCard Equipment="@equipment" ActionName="Cancel Return" OnAction="CancelReturnItem" />
+                                <EquipmentCard Equipment="@equipment" ActionName="Cancel Return" OnAction="e => _cart.ToggleSelfReturn(e)" />
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+            @if (_cart.DelegatedReturns.Any())
+            {
+                <div class="equipment-list">
+                    <h3>Delegated Returns</h3>
+                    <ul class="equipment-list">
+                        @foreach (var equipment in _cart.DelegatedReturns)
+                        {
+                            <li @key="@equipment.Scancode">
+                                <EquipmentCard Equipment="@equipment" ActionName="Cancel Return" OnAction="e => _cart.ToggleDelegatedReturn(e)" />
                             </li>
                         }
                     </ul>
@@ -74,19 +87,18 @@
         </li>
         <li class="equipment-pool">
             <h2><img src="/assets/images/stuff.svg" style="height: 80px" /> Loaned</h2>
-            @if (_loanedEquipment != null)
+            @if (_myLoanedEquipment != null)
             {
                 <div class="equipment-list">
                     <ul>
-                        @foreach (var equipment in _loanedEquipment)
+                        @foreach (var equipment in _myLoanedEquipment)
                         {
-                            @if (_cart.HasReturned(equipment))
+                            @if (!IsEquipmentBeingReturned(equipment))
                             {
-                                continue;
+                                <li @key="@equipment.Scancode">
+                                    <EquipmentCard Equipment="@equipment" />
+                                </li>
                             }
-                            <li @key="@equipment.Scancode">
-                                <EquipmentCard Equipment="@equipment" />
-                            </li>
                         }
                     </ul>
                 </div>
@@ -103,40 +115,52 @@
     [Parameter] public EventCallback<EquipmentCheckoutCart> OnCartChanged { get; set; } = EventCallback<EquipmentCheckoutCart>.Empty;
     [CascadingParameter] public ActiveUserState ActiveUserState { get; set; } = null!;
     private EquipmentCheckoutCart _cart = new();
-    private IEnumerable<EquipmentRow>? _availableEquipment = null;
-    private IEnumerable<EquipmentRow>? _loanedEquipment = null;
+    private IEnumerable<EquipmentRow>? _allEquipment = null;
+    private IEnumerable<EquipmentRow>? _unloanedEquipment = null;
+    private IEnumerable<EquipmentRow>? _myLoanedEquipment = null;
+    private IEnumerable<LoanRow>? _allActiveLoans = null;
     private string _scancode = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        _availableEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.AvailableEquipment));
-        _loanedEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.EquipmentLoanedToUser(ActiveUserState.User!.Scancode)));
+        _allEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.Equipment));
+        _allActiveLoans = await KioskState.ReadStateAsync(s => Task.FromResult(s.ActiveLoans));
+        _unloanedEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.UnloanedEquipment));
+        _myLoanedEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.EquipmentLoanedToUser(ActiveUserState.User!.Scancode)));
 
         _cart.OnCartChanged += HandleCartChanged;
     }
 
+    protected bool IsEquipmentAvailableForTaking(EquipmentRow equipment)
+    {
+        return _unloanedEquipment?.Any(e => e.Scancode == equipment.Scancode) == true
+            && !_cart.ScancodesInCart.Contains(equipment.Scancode);
+    }
+
+    protected bool IsEquipmentBeingReturned(EquipmentRow equipment)
+    {
+        return _cart.TryGetCartItemTypeForEquipment(equipment, out var cartItemType)
+            && (cartItemType == CartItemType.SelfReturn || cartItemType == CartItemType.DelegatedReturn);
+    }
+
     protected async Task HandleScancodeEntered(string scancode)
     {
-        var matchingEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.EquipmentWithScancode(scancode)));
-        if (matchingEquipment == null)
+        var equipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.EquipmentWithScancode(scancode)));
+        if (equipment == null)
         {
             return;
         }
-        else if (_cart.HasReturned(matchingEquipment))
+        else if (_unloanedEquipment?.Any(e => e.Scancode == equipment.Scancode) == true)
         {
-            _cart.CancelReturnItem(matchingEquipment);
+            _cart.ToggleTake(equipment);
         }
-        else if (_cart.IsInCart(matchingEquipment))
+        else if (_myLoanedEquipment?.Any(e => e.Scancode == equipment.Scancode) == true)
         {
-            _cart.RemoveItemToCart(matchingEquipment);
+            _cart.ToggleSelfReturn(equipment);
         }
-        else if (_loanedEquipment?.Any(e => e.Scancode == matchingEquipment.Scancode) == true)
+        else if (_allActiveLoans?.Any(e => e.EquipmentScancode == equipment.Scancode) == true)
         {
-            _cart.ReturnItem(matchingEquipment);
-        }
-        else if (_availableEquipment?.Any(e => e.Scancode == matchingEquipment.Scancode) == true)
-        {
-            _cart.AddItemToCart(matchingEquipment);
+            _cart.ToggleDelegatedReturn(equipment);
         }
     }
 
@@ -148,21 +172,6 @@
         }
 
         _scancode = string.Empty;
-    }
-
-    private void AddItemToCart(EquipmentRow equipment)
-    {
-        _cart.AddItemToCart(equipment);
-    }
-
-    private void RemoteItemFromCart(EquipmentRow equipment)
-    {
-        _cart.RemoveItemToCart(equipment);
-    }
-
-    private void CancelReturnItem(EquipmentRow equipment)
-    {
-        _cart.CancelReturnItem(equipment);
     }
 
     private void HandleCartChanged(EquipmentCheckoutCart _)

@@ -18,7 +18,13 @@
                 {
                     <img src="/assets/images/tickets.svg" style="height: 50px; margin-left: -0.5em;" />
                 }
-                @_checkoutButtonText
+                <span style="position: relative">
+                    <span style="@(_showCheckoutSpinner ? "visibility: hidden" : "")">@_checkoutButtonText</span>
+                    @if (_showCheckoutSpinner)
+                    {
+                        <span class="spinner-border spinner-border-sm" style="position: absolute; left: calc(50% - 0.5 * 1rem); top: calc(50% - 0.5 * 1rem);" role="status" aria-hidden="true"></span>
+                    }
+                </span>
             </button>
         </div>
     </Footer>
@@ -30,6 +36,7 @@
     private EquipmentCheckoutCart? _cart;
     private string _checkoutButtonText = DEFAULT_CHECKOUT_BTN_TEXT;
     private string? _sheetId;
+    private bool _showCheckoutSpinner = false;
 
     protected override void OnInitialized()
     {
@@ -53,17 +60,17 @@
         }
         else
         {
-            if (_cart.RequestedEquipment.Any())
+            if (_cart.Takes.Any())
             {
-                sb.Append($"Checkout {_cart.RequestedEquipment.Count()} items");
-                if (_cart.ReturnedEquipment.Any())
+                sb.Append($"Checkout {_cart.Takes.Count()} items");
+                if (_cart.Returns.Any())
                 {
                     sb.Append(", ");
                 }
             }
-            if (_cart.ReturnedEquipment.Any())
+            if (_cart.Returns.Any())
             {
-                sb.Append($"Return {_cart.ReturnedEquipment.Count()} items");
+                sb.Append($"Return {_cart.Returns.Count()} items");
             }
         }
         _checkoutButtonText = sb.ToString();
@@ -76,42 +83,60 @@
 
         var now = DateTime.Now;
 
-        if (_cart.ReturnedEquipmentIds.Any())
+        if (_cart.Returns.Any() || _cart.Takes.Any())
         {
-            await KioskState.ReadStateAsync(async state =>
+            _showCheckoutSpinner = true;
+            StateHasChanged();
+        }
+
+        try
+        {
+            if (_cart.Returns.Any())
             {
-                var loansToUpdate = new List<LoanRow>();
-                foreach (var loan in state.ActiveLoansForUser(ActiveUserState.User.Scancode))
+                var returnScancodes = _cart.Returns.Select(e => e.Scancode).ToHashSet();
+                await KioskState.ReadStateAsync(async state =>
                 {
-                    if (_cart.ReturnedEquipmentIds.Contains(loan.EquipmentScancode))
+                    var loansToUpdate = new List<LoanRow>();
+                    foreach (var loan in state.ActiveLoans)
                     {
-                        loan.ReturnedDate = now;
-                        loansToUpdate.Add(loan);
+                        if (returnScancodes.Contains(loan.EquipmentScancode))
+                        {
+                            loan.ReturnedDate = now;
+                            loansToUpdate.Add(loan);
+                        }
                     }
-                }
 
-                await KioskSheetRowWriter.UpdateRowsAsync(_sheetId!, "Loans", SheetsAccessor, loansToUpdate);
-            });
-        }
+                    await KioskSheetRowWriter.UpdateRowsAsync(_sheetId!, "Loans", SheetsAccessor, loansToUpdate);
+                });
+            }
 
-        if (_cart.RequestedEquipmentIds.Any())
-        {
-            await KioskState.ReadStateAsync(async state =>
+            if (_cart.Takes.Any())
             {
-                var newLoans = _cart.RequestedEquipmentIds
-                    .Select(equipmentScancode
-                        => new LoanRow(ActiveUserState.User.Scancode, equipmentScancode, now.ToString(), state.LoanSheet))
-                    .ToList();
-
-                foreach (var loan in newLoans)
+                await KioskState.ReadStateAsync(async state =>
                 {
-                    state.LoanSheet.Rows.Add(loan);
-                }
+                // TODO improve erro handling
+                if (state.LoanSheet != null)
+                    {
+                        var newLoans = _cart.Takes
+                        .Select(e => new LoanRow(ActiveUserState.User.Scancode, e.Scancode, now.ToString(), state.LoanSheet))
+                        .ToList();
 
-                await KioskSheetRowWriter.UpdateRowsAsync(_sheetId!, "Loans", SheetsAccessor, newLoans);
-            });
+                        foreach (var loan in newLoans)
+                        {
+                            state.LoanSheet.Rows.Add(loan);
+                        }
+
+                        await KioskSheetRowWriter.UpdateRowsAsync(_sheetId!, "Loans", SheetsAccessor, newLoans);
+                    }
+                });
+            }
+
+            NavigationManager.NavigateTo("/");
         }
-
-        NavigationManager.NavigateTo("/");
+        // TODO improve error handling
+        catch (Exception _)
+        {
+            _showCheckoutSpinner = false;
+        }
     }
 }

@@ -1,53 +1,81 @@
 ﻿using Scani.Kiosk.Backends.GoogleSheets.Sheets.Models;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Scani.Kiosk.Data;
 
 public class EquipmentCheckoutCart
 {
     public event Action<EquipmentCheckoutCart> OnCartChanged = null!;
-    private readonly IDictionary<string, EquipmentRow> _idToReturnedEquipment = new Dictionary<string, EquipmentRow>();
-    private readonly IDictionary<string, EquipmentRow> _idToRequestedEquipment = new Dictionary<string, EquipmentRow>();
-    public IEnumerable<string> ReturnedEquipmentIds => _idToReturnedEquipment.Keys;
-    public IEnumerable<EquipmentRow> ReturnedEquipment => _idToReturnedEquipment.Values;
-    public IEnumerable<string> RequestedEquipmentIds => _idToRequestedEquipment.Keys;
-    public IEnumerable<EquipmentRow> RequestedEquipment => _idToRequestedEquipment.Values;
-    public bool IsEmpty => !(_idToRequestedEquipment.Any() || _idToReturnedEquipment.Any());
+    private readonly IDictionary<string, CartItem> _scancodeToCartItem = new Dictionary<string, CartItem>();
+    public IEnumerable<string> ScancodesInCart => _scancodeToCartItem.Keys;
+    public IEnumerable<EquipmentRow> Takes => _scancodeToCartItem.Values
+        .Where(ci => ci.ItemType == CartItemType.Take)
+        .Select(ci => ci.EquipmentRow)
+        .ToList();
+    public IEnumerable<EquipmentRow> SelfReturns => _scancodeToCartItem.Values
+        .Where(ci => ci.ItemType == CartItemType.SelfReturn)
+        .Select(ci => ci.EquipmentRow)
+        .ToList();
+    public IEnumerable<EquipmentRow> DelegatedReturns => _scancodeToCartItem.Values
+        .Where(ci => ci.ItemType == CartItemType.DelegatedReturn)
+        .Select(ci => ci.EquipmentRow)
+        .ToList();
+    public IEnumerable<EquipmentRow> Returns => SelfReturns.Concat(DelegatedReturns).ToList();
+    public bool IsEmpty => !_scancodeToCartItem.Keys.Any();
 
-    public void AddItemToCart(EquipmentRow item)
+    public bool TryGetCartItemTypeForEquipment(EquipmentRow equipment, [NotNullWhen(true)] out CartItemType? itemType)
     {
-        if (_idToRequestedEquipment.ContainsKey(item.Scancode)) return;
-        _idToRequestedEquipment[item.Scancode] = item;
-        OnCartChanged.Invoke(this);
+        itemType = null;
+
+        if (_scancodeToCartItem.TryGetValue(equipment.Scancode, out var cartItem))
+        {
+            itemType = cartItem.ItemType;
+            return true;
+        }
+
+        return false;
+    }
+        
+
+    public void ToggleSelfReturn(EquipmentRow equipment)
+    {
+        if (_scancodeToCartItem.ContainsKey(equipment.Scancode))
+        {
+            _scancodeToCartItem.Remove(equipment.Scancode);
+        }
+        else
+        {
+            _scancodeToCartItem.Add(equipment.Scancode, new CartItem(CartItemType.SelfReturn, equipment));
+        }
+
+        OnCartChanged?.Invoke(this);
     }
 
-    public void RemoveItemToCart(EquipmentRow item)
+    public void ToggleDelegatedReturn(EquipmentRow equipment)
     {
-        if (!_idToRequestedEquipment.ContainsKey(item.Scancode)) return;
-        _idToRequestedEquipment.Remove(item.Scancode);
-        OnCartChanged.Invoke(this);
+        if (_scancodeToCartItem.ContainsKey(equipment.Scancode))
+        {
+            _scancodeToCartItem.Remove(equipment.Scancode);
+        }
+        else
+        {
+            _scancodeToCartItem.Add(equipment.Scancode, new CartItem(CartItemType.DelegatedReturn, equipment));
+        }
+
+        OnCartChanged?.Invoke(this);
     }
 
-    public void ReturnItem(EquipmentRow item)
+    public void ToggleTake(EquipmentRow equipment)
     {
-        if (_idToReturnedEquipment.ContainsKey(item.Scancode)) return;
-        _idToReturnedEquipment[item.Scancode] = item;
-        OnCartChanged.Invoke(this);
-    }
+        if (_scancodeToCartItem.ContainsKey(equipment.Scancode))
+        {
+            _scancodeToCartItem.Remove(equipment.Scancode);
+        }
+        else
+        {
+            _scancodeToCartItem.Add(equipment.Scancode, new CartItem(CartItemType.Take, equipment));
+        }
 
-    public void CancelReturnItem(EquipmentRow item)
-    {
-        if (!_idToReturnedEquipment.ContainsKey(item.Scancode)) return;
-        _idToReturnedEquipment.Remove(item.Scancode);
-        OnCartChanged.Invoke(this);
-    }
-
-    public bool HasReturned(EquipmentRow item)
-    {
-        return _idToReturnedEquipment.ContainsKey(item.Scancode);
-    }
-
-    public bool IsInCart(EquipmentRow item)
-    {
-        return _idToRequestedEquipment.ContainsKey(item.Scancode);
+        OnCartChanged?.Invoke(this);
     }
 }

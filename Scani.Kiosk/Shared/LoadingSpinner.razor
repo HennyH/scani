@@ -1,3 +1,8 @@
 ﻿<div style="display: flex; align-items: center; justify-items: center; justify-self: center; align-self: center;">
-    <div class="lds-spinner"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+    <div class="lds-spinner" style="height: @(Height); width: @(Width);"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
 </div>
+
+@code {
+    [Parameter] public int Height { get; set; } = 80;
+    [Parameter] public int Width { get; set; } = 80;
+}
