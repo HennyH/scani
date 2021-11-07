@@ -1,0 +1,77 @@
+﻿@implements IAsyncDisposable
+@inject IJSRuntime JsRuntime
+
+<div id="@_modalId" class="modal fade" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="staticBackdropLabel">@Title</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" style="@BodyStyle">
+        @Body
+      </div>
+      <div class="modal-footer" style="@FooterStyle">
+        @Footer
+      </div>
+    </div>
+  </div>
+</div>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public RenderFragment? Body { get; set; }
+    [Parameter] public string? BodyStyle { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+    [Parameter] public string? FooterStyle { get; set; }
+    [Parameter] public bool IsVisable { get; set; } = false;
+    [Parameter] public EventCallback OnModalDismissedFromJs { get; set; }
+    private readonly string _modalId = $"_modal-{Guid.NewGuid().ToString()}";
+    private bool _hasHadFirstRender = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            await JsRuntime.InvokeVoidAsync(
+                "InitializeModal",
+                _modalId,
+                DotNetObjectReference.Create(this),
+                nameof(HandleModalDismissedViaJs));
+            _hasHadFirstRender = true;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        if (_hasHadFirstRender && IsVisable)
+        {
+            await JsRuntime.InvokeVoidAsync("ShowModal", _modalId);
+        }
+        else if (_hasHadFirstRender && !IsVisable)
+        {
+            await JsRuntime.InvokeVoidAsync("HideModal", _modalId);
+        }
+    }
+
+    [JSInvokable]
+    public async Task HandleModalDismissedViaJs()
+    {
+        if (OnModalDismissedFromJs.HasDelegate)
+        {
+            await OnModalDismissedFromJs.InvokeAsync();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hasHadFirstRender)
+        {
+            await JsRuntime.InvokeVoidAsync("DisposeModal", _modalId);
+        }
+    }
+}

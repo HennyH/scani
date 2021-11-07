@@ -1,21 +1,24 @@
-﻿@inject SynchronizedKioskState KioskState
-@inject ActiveUserService ActiveUserService
+﻿@page "/login"
+@inject SynchronizedKioskState KioskState
 @inject NavigationManager NavigationManager
+@inject ActiveUserService ActiveUserService
 
-<KeySequenceReader OnKeySequenceEntered="@(keys => TryLoginWithScancode(string.Join("", keys)))" />
-
-<form @onsubmit="@HandleLogin">
-    <ScannerImage />
-    <label>
-        Name or Scancode:
-        <input type="text" @bind-value="@_scancode" />
-    </label>
-    <input type="submit" value="Login" />
-    @if (_loginErrorMessage != null)
-    {
-        <p class="validation-message">@_loginErrorMessage</p>
-    }
-</form>
+<KioskScreen AllowAnonymous="true" OnScancodeDetected="TryLoginWithScancode">
+    <Screen>
+        <form @onsubmit="@HandleLogin">
+            <ScannerImage />
+            <label>
+                Name or Scancode:
+                <input type="text" @bind-value="@_scancode" />
+            </label>
+            <input type="submit" value="Login" />
+            @if (_loginErrorMessage != null)
+            {
+                <p class="validation-message">@_loginErrorMessage</p>
+            }
+        </form>
+    </Screen>
+</KioskScreen>
 
 @code {
     private string _scancode { get; set; } = string.Empty;

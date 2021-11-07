@@ -6,6 +6,7 @@
 @code {
     [Parameter] public TimeSpan KeySequenceTimeout { get; set; } = TimeSpan.FromSeconds(1);
     [Parameter] public EventCallback<IReadOnlyCollection<string>> OnKeySequenceEntered { get; set; }
+    private bool _firstRenderComplete = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -17,6 +18,7 @@
                 nameof(HandleKeySequenceEntered),
                 KeySequenceTimeout.TotalMilliseconds
             );
+            _firstRenderComplete = true;
         }
     }
 
@@ -29,13 +31,9 @@
 
     public async ValueTask DisposeAsync()
     {
-        try
+        if (_firstRenderComplete)
         {
             await JsRuntime.InvokeVoidAsync("deregisterKeySequenceListener");
-        }
-        catch (Exception error) when (error is InvalidOperationException || error is JSDisconnectedException)
-        {
-            Logger.LogWarning("Failed to deregister key sequence listenter with error: {}", error);
         }
     }
 }

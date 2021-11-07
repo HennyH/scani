@@ -2,7 +2,7 @@
     height: 100vh;
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(100px, min-content) 1fr minmax(100px, min-content);
+    grid-template-rows: minmax(80px, min-content) 1fr minmax(80px, min-content);
 }
 
 header {
@@ -11,7 +11,8 @@ header {
     display: grid;
     justify-items: center;
     align-items: center;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr max-content max-content;
+    gap: 1em;
 }
 
 header > .status-btn {

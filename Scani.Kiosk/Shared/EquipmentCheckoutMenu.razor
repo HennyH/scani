@@ -2,8 +2,6 @@
 @inject SynchronizedKioskState KioskState
 @inject Scani.Kiosk.Backends.GoogleSheet.KioskSheetSynchronizer SheetSynchronizer
 
-<KeySequenceReader OnKeySequenceEntered="@HandleKeySequenceEntered" />
-
 <div class="equipment-checkout-menu">
     <form @onclick="HandleManualScancodeFormSubmit" @onclick:preventDefault @onclick:stopPropagation>
         <label>
@@ -143,7 +141,7 @@
             && (cartItemType == CartItemType.SelfReturn || cartItemType == CartItemType.DelegatedReturn);
     }
 
-    protected async Task HandleScancodeEntered(string scancode)
+    public async Task HandleScancodeEntered(string scancode)
     {
         var equipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.EquipmentWithScancode(scancode)));
         if (equipment == null)

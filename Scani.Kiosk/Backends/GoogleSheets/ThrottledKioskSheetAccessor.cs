@@ -1,11 +1,12 @@
 ﻿using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
+using Scani.Kiosk.Extensions;
 using Scani.Kiosk.Helpers;
 
 namespace Scani.Kiosk.Backends.GoogleSheet
 {
-    public sealed class ThrottledKioskSheetAccessorFactory
+    public sealed class ThrottledKioskSheetAccessor
     {
         private static readonly string[] SHEET_SCOPES = new[]
         {
@@ -14,22 +15,21 @@ namespace Scani.Kiosk.Backends.GoogleSheet
         private readonly string _credentialsFile;
         private readonly string _appName;
         private readonly CancellationToken _cancellationToken;
+        private readonly Lazy<Task<ThrottledAccessor<SheetsService>>> _lazyThrottledAccessor;
 
-        public ThrottledKioskSheetAccessorFactory(
+        public ThrottledKioskSheetAccessor(
                 IConfiguration configuration,
                 CancellationToken cancellationToken = default)
         {
             this._credentialsFile = configuration.GetValue<string>("GoogleSheet:CredentialsFile");
             this._appName = configuration.GetValue<string>("GoogleSheet:AppName");
             this._cancellationToken = cancellationToken;
+#pragma warning disable VSTHRD011 // Use AsyncLazy<T>
+            this._lazyThrottledAccessor = new Lazy<Task<ThrottledAccessor<SheetsService>>>(async () => new ThrottledAccessor<SheetsService>(await CreateSheetsServiceAsync(), 100, TimeSpan.FromMinutes(1)));
+#pragma warning restore VSTHRD011 // Use AsyncLazy<T>
         }
 
-        public LazyAsyncThrottledAccessor<SheetsService> CreateAccessor(int limit, TimeSpan limitPeriod)
-        {
-            return new LazyAsyncThrottledAccessor<SheetsService>(() => CreateSheetsService(), limit, limitPeriod);
-        }
-
-        private async Task<SheetsService> CreateSheetsService()
+        private async Task<SheetsService> CreateSheetsServiceAsync()
         {
             using var stream = new FileStream(_credentialsFile, FileMode.Open, FileAccess.Read);
             var credential = await GoogleCredential.FromStreamAsync(stream, _cancellationToken);
@@ -39,6 +39,16 @@ namespace Scani.Kiosk.Backends.GoogleSheet
                 HttpClientInitializer = credential,
                 ApplicationName = _appName
             });
+        }
+
+        public async Task AccessAsync(Func<SheetsService, Task> action, TimeSpan? interval = null)
+        {
+            await (await _lazyThrottledAccessor).AccessAsync(action, interval);
+        }
+
+        public async Task<R> AccessAsync<R>(Func<SheetsService, Task<R>> action, TimeSpan? interval = null)
+        {
+            return await (await _lazyThrottledAccessor).AccessAsync(action, interval);
         }
     }
 }

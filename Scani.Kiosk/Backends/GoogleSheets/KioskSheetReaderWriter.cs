@@ -12,19 +12,19 @@ namespace Scani.Kiosk.Backends.GoogleSheet
         private readonly AsyncReaderWriterLock _sheetLock = new();
         private readonly ILogger<KioskSheetReaderWriter> _logger;
         private readonly string _sheetId;
-        private readonly LazyAsyncThrottledAccessor<SheetsService> _sheetsAccessor;
+        private readonly ThrottledKioskSheetAccessor _sheetsAccessor;
 
         public KioskSheetReaderWriter(
                 ILogger<KioskSheetReaderWriter> logger,
                 IConfiguration configuration,
-                LazyAsyncThrottledAccessor<SheetsService> sheetsAccessor)
+                ThrottledKioskSheetAccessor sheetsAccessor)
         {
             this._logger = logger;
             this._sheetId = configuration.GetValue<string>("GoogleSheet:SheetId");
             this._sheetsAccessor = sheetsAccessor;
         }
 
-        private async Task<IList<IList<IList<object>>>> GetRowsAsync(LazyAsyncThrottledAccessor<SheetsService> service, string sheetId, string[] sheetNames, int pageSize = 1000)
+        private async Task<IList<IList<IList<object>>>> GetRowsAsync(ThrottledKioskSheetAccessor service, string sheetId, string[] sheetNames, int pageSize = 1000)
         {
             var results = new List<IList<IList<object>>>();
             foreach (var _ in sheetNames)

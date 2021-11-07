@@ -1,7 +1,8 @@
 ﻿@implements IDisposable
+@inject IJSRuntime JsRuntime
 @inject SynchronizedKioskState KioskState
 
-<button type="button" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#status-modal" style="justify-self: flex-end; margin-right: 1em;">
+<button type="button" class="btn btn-dark" @onclick="_ => _isModalVisable = true" style="justify-self: flex-end; margin-right: 1em;">
     <img src="@(_ok ? "/assets/images/okay.svg" : "/assets/images/error.svg")" style="width: 50px" />
     @if (_lastUpdated.HasValue)
     {
@@ -9,62 +10,58 @@
     }
 </button>
 
-<div class="modal" id="status-modal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Kiosk Status</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                @if (_ok)
-                {
-                    <p>Everything looks good - well done!</p>
-                }
-                else
-                {
-                    <h5 style="text-align: center">Errors</h5>
-                }
+<Modal
+    Title="Kiosk Status"
+    IsVisable="_isModalVisable"
+    OnModalDismissedFromJs="() => _isModalVisable = false"
+>
+    <Body>
+        @if (_ok)
+        {
+            <p>Everything looks good - well done!</p>
+        }
+        else
+        {
+            <h5 style="text-align: center">Errors</h5>
+        }
 
-                @if (_studentErrors.Any())
+        @if (_studentErrors.Any())
+        {
+            <h6>Students</h6>
+            <ul>
+                @foreach (var error in _studentErrors)
                 {
-                    <h6>Students</h6>
-                    <ul>
-                        @foreach (var error in _studentErrors)
-                        {
-                            <li>@error.Message</li>
-                        }
-                    </ul>
+                    <li>@error.Message</li>
                 }
+            </ul>
+        }
 
-                @if (_equipmentErrors.Any())
+        @if (_equipmentErrors.Any())
+        {
+            <h6>Equipment</h6>
+            <ul>
+                @foreach (var error in _equipmentErrors)
                 {
-                    <h6>Equipment</h6>
-                    <ul>
-                        @foreach (var error in _equipmentErrors)
-                        {
-                            <li>@error.Message</li>
-                        }
-                    </ul>
+                    <li>@error.Message</li>
                 }
+            </ul>
+        }
 
-                @if (_loanErrors.Any())
+        @if (_loanErrors.Any())
+        {
+            <h6>Loans</h6>
+            <ul>
+                @foreach (var error in _loanErrors)
                 {
-                    <h6>Loans</h6>
-                    <ul>
-                        @foreach (var error in _loanErrors)
-                        {
-                            <li>@error.Message</li>
-                        }
-                    </ul>
+                    <li>@error.Message</li>
                 }
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+            </ul>
+        }
+    </Body>
+    <Footer>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+    </Footer>
+</Modal>
 
 @code {
     private List<KioskSheetReadError> _loanErrors = new List<KioskSheetReadError>();
@@ -72,6 +69,7 @@
     private List<KioskSheetReadError> _equipmentErrors = new List<KioskSheetReadError>();
     private bool _ok => !_loanErrors.Any() && !_studentErrors.Any() && !_equipmentErrors.Any();
     private DateTime? _lastUpdated = null;
+    private bool _isModalVisable = false;
 
     protected override async Task OnInitializedAsync()
     {

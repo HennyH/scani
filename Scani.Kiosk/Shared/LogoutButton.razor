@@ -1,4 +1,5 @@
 ﻿@inject ActiveUserService ActiveUserService
+@inject NavigationManager NavigationManager
 
 <button class="btn btn-danger" disabled="@(!ActiveUserState.HasActiveUser)" @onclick="@HandleExitClicked" style="background-color: lightcoral;">
     <img src="/assets/images/stop-sign.svg" style="height: 50px; margin-left: -0.5em;" />
@@ -13,5 +14,6 @@
     {
         ActiveUserService.LogoutActiveUser();
         await OnLogout.InvokeAsync();
+        NavigationManager.NavigateTo("/");
     }
 }

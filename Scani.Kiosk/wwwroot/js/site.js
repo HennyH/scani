@@ -1,8 +1,62 @@
 ﻿let keySequenceListener = null;
 
+let $codeReader = new Promise((resolve, reject) => {
+    window.addEventListener('load', function () {
+        const zx = new ZXing.BrowserMultiFormatReader();
+        zx.timeBetweenScansMillis = 50;
+        resolve(zx);
+    })
+});
+
+window.ZXingListVideoInputDevices = async () => {
+    const zx = await $codeReader;
+    try {
+        await navigator.mediaDevices.getUserMedia({ audio: false, video: true })
+    } finally {
+        return await zx.listVideoInputDevices();
+    }
+}
+
+window.ZXingResetCodeReader = async () => {
+    const zx = await $codeReader;
+    zx.reset();
+}
+
+window.ZXingRegisterOnDecodeListener = async (dotNetObjRef, onResultMethodName, onErrorMethodName, deviceId, videoElementId, sameCodeTimeoutMilliseconds) => {
+
+    let codeToLastScannedTime = {};
+
+    await ZXingResetCodeReader();
+
+    const zx = await $codeReader;
+    zx.decodeFromVideoDevice(deviceId, videoElementId, async (result, err) => {
+        if (result) {
+            const now = new Date();
+            const code = result.getText();
+            if (codeToLastScannedTime[code] === undefined || (now - codeToLastScannedTime[code]) >= sameCodeTimeoutMilliseconds) {
+                codeToLastScannedTime[code] = now;
+                await dotNetObjRef.invokeMethodAsync(onResultMethodName, result.getText());
+            }
+        } else if (err && !(err instanceof ZXing.NotFoundException)) {
+            await dotNetObjRef.invokeMethodAsync(onErrorMethodName, err.toString());
+            console.error(err);
+        }
+    });
+}
+
+window.StreamMediaDeviceIntoVideoElement = async (videoElement, deviceId) => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false, deviceId });
+        videoElement.srcObject = stream;
+        videoElement.onloadedmetadata = e => videoElement.play();
+    } catch (err) {
+        console.error(err);
+    }
+}
+
 window.registerKeySequenceListener = (dotNetObjRef, methodName, sequenceTimeoutMilliseconds) => {
     if (keySequenceListener != null) {
-        throw Error("There is already a key sequence listener.");
+        deregisterKeySequenceListener(keySequenceListener);
     }
 
     let lastAlteredTime = null;
@@ -37,4 +91,39 @@ window.deregisterKeySequenceListener = () => {
         window.removeEventListener("keyup", keySequenceListener);
     }
     keySequenceListener = null;
+}
+
+const elementIdToModalInstance = {}
+
+window.InitializeModal = (elementId, dotNetObjRef, onDismissedMethodName) => {
+    const element = document.getElementById(elementId);
+    const modal = new bootstrap.Modal(element);
+    element.addEventListener("hide.bs.modal", async () => {
+        await dotNetObjRef.invokeMethodAsync(onDismissedMethodName);
+    });
+    elementIdToModalInstance[elementId] = modal;
+}
+
+window.ShowModal = (elementId) => {
+    try {
+        elementIdToModalInstance[elementId].show();
+    } catch (err) {
+        console.warn(err);
+    }
+}
+
+window.HideModal = (elementId) => {
+    try {
+        elementIdToModalInstance[elementId].hide();
+    } catch (err) {
+        console.warn(err);
+    }
+}
+
+window.DisposeModal = (elementId) => {
+    try {
+        elementIdToModalInstance[elementId].dispose();
+    } catch (err) {
+        console.warn(err);
+    }
 }

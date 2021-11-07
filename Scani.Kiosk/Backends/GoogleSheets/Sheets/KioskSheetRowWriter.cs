@@ -1,5 +1,6 @@
 ﻿using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
+using Scani.Kiosk.Backends.GoogleSheet;
 using Scani.Kiosk.Backends.GoogleSheets.Sheets.Models;
 using Scani.Kiosk.Helpers;
 using System.ComponentModel.DataAnnotations;
@@ -13,7 +14,7 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
         public static async Task<IReadOnlyCollection<KioskSheetWriteResult<T>>> UpdateRowsAsync<T>(
                 string sheetId,
                 string sheetName,
-                LazyAsyncThrottledAccessor<SheetsService> sheetsAccessor,
+                ThrottledKioskSheetAccessor sheetsAccessor,
                 IEnumerable<T> rows)
             where T : ISheetRow
         {

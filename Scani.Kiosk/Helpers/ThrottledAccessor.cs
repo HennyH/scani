@@ -63,25 +63,4 @@ namespace Scani.Kiosk.Helpers
             if (_resource is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    public class LazyAsyncThrottledAccessor<T> : IDisposable
-    {
-        private readonly ThrottledAccessor<AsyncLazy<T>> _innerAccessor;
-
-        public LazyAsyncThrottledAccessor(Func<Task<T>> initalizer, int limit, TimeSpan limitPeriod)
-        {
-            this._innerAccessor = new ThrottledAccessor<AsyncLazy<T>>(new AsyncLazy<T>(initalizer), limit, limitPeriod);
-        }
-
-        public async Task AccessAsync(Func<T, Task> action, TimeSpan? interval = null)
-            => await _innerAccessor.AccessAsync(async lazyResource => await action(await lazyResource.GetValueAsync()), interval);
-
-        public async Task<R> AccessAsync<R>(Func<T, Task<R>> action, TimeSpan? interval = null)
-            => await _innerAccessor.AccessAsync(async lazyResource => await action(await lazyResource.GetValueAsync()), interval);
-
-        public void Dispose()
-        {
-            _innerAccessor?.Dispose();
-        }
-    }
 }

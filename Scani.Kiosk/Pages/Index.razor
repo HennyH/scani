@@ -1,13 +1,25 @@
 ﻿@page "/"
+@inject NavigationManager NavigationManager
 @inject ActiveUserService ActiveUserService
 
 <PageTitle>Kiosk</PageTitle>
-
-<KioskScreen />
+<LoadingSpinner />
 
 @code {
-    protected override void OnInitialized()
+    [CascadingParameter] public ActiveUserState ActiveUserState { get; set; } = null!;
+
+    protected override void OnAfterRender(bool firstRender)
     {
-        ActiveUserService.LogoutActiveUser();
+        if (firstRender)
+        {
+            if (ActiveUserState.HasActiveUser)
+            {
+                NavigationManager.NavigateTo("/checkout");
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/login");
+            }
+        }
     }
 }

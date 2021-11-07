@@ -1,0 +1,18 @@
+﻿@inject NavigationManager NavigationManager
+
+<div style="display: grid; justify-items: center; align-items: center;">
+    <img src="assets/imagesassets/images/lock.svg" />
+    <h5>Access Denied</h5>
+    <p>
+        Sorry
+        <span style="font-weight: bold;">@(ActiveUserState.HasActiveUser ? ActiveUserState.User.DisplayName : "Anon")</span>
+        , but you don't have permission to access this page.
+    </p>
+    <a class="btn btn-primary" @onclick="@(() => NavigationManager.NavigateTo("/"))">
+        Home
+    </a>
+</div>
+
+@code {
+    [CascadingParameter] public ActiveUserState ActiveUserState { get; set; } = null!;
+}

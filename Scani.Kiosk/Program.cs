@@ -1,8 +1,5 @@
-using Google.Apis.Sheets.v4;
 using Scani.Kiosk.Backends.GoogleSheet;
-using Scani.Kiosk.Helpers;
 using Scani.Kiosk.Services;
-using Scani.Kiosk.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,12 +9,10 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddScoped<ActiveUserService>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<KioskSheetSynchronizer>();
-builder.Services.AddSingleton<ThrottledKioskSheetAccessorFactory>();
-builder.Services.AddSingleton<LazyAsyncThrottledAccessor<SheetsService>>(services =>
-    services.GetRequiredService<ThrottledKioskSheetAccessorFactory>().CreateAccessor(100, TimeSpan.FromMinutes(1)));
+builder.Services.AddSingleton<ThrottledKioskSheetAccessor>();
 builder.Services.AddSingleton<KioskSheetReaderWriter>();
 builder.Services.AddSingleton<SynchronizedKioskState>();
-builder.Services.AddHostedService<KioskSheetSynchronizer>(s => s.GetRequiredService<KioskSheetSynchronizer>());
+builder.Services.AddHostedService<KioskSheetSynchronizer>();
 
 var app = builder.Build();
 

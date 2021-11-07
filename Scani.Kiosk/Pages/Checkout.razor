@@ -2,13 +2,14 @@
 @inject SynchronizedKioskState KioskState
 @inject IConfiguration Configuration
 @inject NavigationManager NavigationManager
-@inject LazyAsyncThrottledAccessor<SheetsService> SheetsAccessor
+@inject ThrottledKioskSheetAccessor SheetsAccessor
+@inject ActiveUserService ActiveUserService
 
 <PageTitle>Kiosk - Checkout</PageTitle>
 
-<KioskScreen>
+<KioskScreen OnScancodeDetected="scancode => _checkoutMenu?.HandleScancodeEntered(scancode) ?? Task.CompletedTask">
     <Screen>
-        <EquipmentCheckoutMenu OnCartChanged="HandleCartChanged" />
+        <EquipmentCheckoutMenu @ref="_checkoutMenu" OnCartChanged="HandleCartChanged" />
     </Screen>
     <Footer>
         <div class="footer">
@@ -37,6 +38,7 @@
     private string _checkoutButtonText = DEFAULT_CHECKOUT_BTN_TEXT;
     private string? _sheetId;
     private bool _showCheckoutSpinner = false;
+    private EquipmentCheckoutMenu? _checkoutMenu;
 
     protected override void OnInitialized()
     {
@@ -131,6 +133,7 @@
                 });
             }
 
+            ActiveUserService.LogoutActiveUser();
             NavigationManager.NavigateTo("/");
         }
         // TODO improve error handling
