@@ -26,8 +26,6 @@ window.ZXingRegisterOnDecodeListener = async (dotNetObjRef, onResultMethodName, 
 
     let codeToLastScannedTime = {};
 
-    await ZXingResetCodeReader();
-
     const zx = await $codeReader;
     zx.decodeFromVideoDevice(deviceId, videoElementId, async (result, err) => {
         if (result) {
@@ -44,11 +42,28 @@ window.ZXingRegisterOnDecodeListener = async (dotNetObjRef, onResultMethodName, 
     });
 }
 
-window.StreamMediaDeviceIntoVideoElement = async (videoElement, deviceId) => {
+const videoElementIdToAlreadyPlaying = {};
+
+window.StreamMediaDeviceIntoVideoElement = async (elementId, deviceId) => {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false, deviceId });
-        videoElement.srcObject = stream;
-        videoElement.onloadedmetadata = e => videoElement.play();
+        const videoElement = document.getElementById(elementId);
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                deviceId: { exact: deviceId }
+            }
+        });
+        console.log("showing stream from", deviceId, stream, "on element", elementId);
+        videoElement.srcObject = null;
+        setTimeout(() => {
+            videoElement.srcObject = stream;
+            setTimeout(() => {
+                try {
+                    videoElement.play();
+                } catch (error) {
+
+                }
+            });
+        });
     } catch (err) {
         console.error(err);
     }

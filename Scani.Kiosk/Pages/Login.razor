@@ -1,11 +1,12 @@
 ﻿@page "/login"
+@implements IDisposable
 @inject SynchronizedKioskState KioskState
 @inject NavigationManager NavigationManager
 @inject ActiveUserService ActiveUserService
 
-<KioskScreen AllowAnonymous="true" OnScancodeDetected="TryLoginWithScancode">
+<KioskScreen AllowAnonymous="true">
     <Screen>
-        <form @onsubmit="@HandleLogin">
+        <form @onsubmit="@HandleLoginFormSubmitted">
             <ScannerImage />
             <label>
                 Name or Scancode:
@@ -21,12 +22,15 @@
 </KioskScreen>
 
 @code {
+    [CascadingParameter] public ZXingScanner ZXingScanner { get; set; } = null!;
     private string _scancode { get; set; } = string.Empty;
     private string? _loginErrorMessage { get; set; } = null;
 
-    private async Task HandleLogin()
+    protected override void OnInitialized()
     {
-        await TryLoginWithScancode(_scancode);
+        base.OnInitialized();
+
+        ZXingScanner.ScancodeDetected += HandleScancodeDetected;
     }
 
     private async Task TryLoginWithScancode(string scancode)
@@ -40,5 +44,20 @@
             ActiveUserService.SetActiveUser(user);
             NavigationManager.NavigateTo("/checkout");
         }
+    }
+
+    private async void HandleScancodeDetected(string scancode)
+    {
+        await TryLoginWithScancode(scancode);
+    }
+
+    private async Task HandleLoginFormSubmitted()
+    {
+        await TryLoginWithScancode(_scancode);
+    }
+
+    public void Dispose()
+    {
+        ZXingScanner.ScancodeDetected -= HandleScancodeDetected;
     }
 }

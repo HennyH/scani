@@ -26,6 +26,7 @@
     [Parameter] public string? FooterStyle { get; set; }
     [Parameter] public bool IsVisable { get; set; } = false;
     [Parameter] public EventCallback OnModalDismissedFromJs { get; set; }
+    private bool _lastIsVisable = false;
     private readonly string _modalId = $"_modal-{Guid.NewGuid().ToString()}";
     private bool _hasHadFirstRender = false;
 
@@ -48,14 +49,19 @@
     {
         await base.OnParametersSetAsync();
 
-        if (_hasHadFirstRender && IsVisable)
+        if (_lastIsVisable != IsVisable)
         {
-            await JsRuntime.InvokeVoidAsync("ShowModal", _modalId);
+            if (_hasHadFirstRender && IsVisable)
+            {
+                await JsRuntime.InvokeVoidAsync("ShowModal", _modalId);
+            }
+            else if (_hasHadFirstRender && !IsVisable)
+            {
+                await JsRuntime.InvokeVoidAsync("HideModal", _modalId);
+            }
         }
-        else if (_hasHadFirstRender && !IsVisable)
-        {
-            await JsRuntime.InvokeVoidAsync("HideModal", _modalId);
-        }
+
+        _lastIsVisable = IsVisable;
     }
 
     [JSInvokable]

@@ -2,19 +2,17 @@
 @inject SynchronizedKioskState KioskState
 @inject NavigationManager NavigationManager
 
-<KeySequenceReader OnKeySequenceEntered="keys => HandleScancodeDetected(string.Join(string.Empty, keys))" />
-
 <div id="kiosk-screen">
     <header>
         <h1 style="margin: 0 auto;">@Title</h1>
 
         <p style="margin: 0 auto;">Welcome, <span class="name">@(ActiveUserState.User?.DisplayName ?? "Anon")</span>!</p>
 
-        <WebcamScanner OnZXingResult="scancode => HandleScancodeDetected(scancode)" />
+        <WebcamStatusIndicator />
 
         @if (_loaded)
         {
-            <StatusIndicator />
+            <KioskStateStatusIndicator />
         }
         else
         {
@@ -54,7 +52,6 @@
     [Parameter] public RenderFragment? Footer { get; set; }
     [Parameter] public RenderFragment? Screen { get; set; }
     [Parameter] public bool AllowAnonymous { get; set; } = false;
-    [Parameter] public EventCallback<string> OnScancodeDetected { get; set; }
     [CascadingParameter] public ActiveUserState ActiveUserState { get; set; } = null!;
     private bool _loaded = false;
 
@@ -78,11 +75,6 @@
         {
             NavigationManager.NavigateTo("/login");
         }
-    }
-
-    private async Task HandleScancodeDetected(string scancode)
-    {
-        await OnScancodeDetected.InvokeAsync(scancode);
     }
 
     private async void HandleKioskStateChanged()

@@ -1,0 +1,73 @@
+﻿@inject IJSRuntime JsRuntime
+@inject ILogger<ZXingScanner> Logger
+
+<CascadingValue Value="this">
+    @ChildContent
+</CascadingValue>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string VideoElementId { get; set; } = string.Empty;
+    [Parameter] public TimeSpan RescanDelay { get; set; } = TimeSpan.FromSeconds(2);
+    [Parameter] public TimeSpan KeySequenceTimeout { get; set; } = TimeSpan.FromSeconds(1);
+    public IReadOnlyList<MediaDeviceInfo>? MediaDevices { get; private set; }
+    public MediaDeviceInfo? ActiveMediaDevice { get; private set; }
+    public MediaDeviceInfo? LastActiveMediaDevice { get; private set; }
+    public event Action<string>? ScancodeDetected;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            MediaDevices = await JsRuntime.InvokeAsync<List<MediaDeviceInfo>>("ZXingListVideoInputDevices");
+            if (MediaDevices.Any())
+            {
+                await EnableWebCamScanning(MediaDevices[0]);
+                StateHasChanged();
+            }
+
+            await JsRuntime.InvokeVoidAsync(
+                "registerKeySequenceListener",
+                DotNetObjectReference.Create(this),
+                nameof(HandleKeySequenceEntered),
+                KeySequenceTimeout.TotalMilliseconds
+            );
+        }
+    }
+
+    [JSInvokable]
+    public void HandleScanResult(string scancode)
+    {
+        ScancodeDetected?.Invoke(scancode);
+    }
+
+    [JSInvokable]
+    public void HandleKeySequenceEntered(IReadOnlyCollection<string> keys)
+    {
+        Logger.LogInformation("Key sequence entered: {0}", keys);
+        HandleScanResult(string.Join(string.Empty, keys));
+    }
+
+    public async Task DisableWebCamScanning()
+    {
+        await JsRuntime.InvokeVoidAsync("ZXingResetCodeReader");
+        ActiveMediaDevice = null;
+    }
+
+    public async Task EnableWebCamScanning(MediaDeviceInfo mediaDevice)
+    {
+        await JsRuntime.InvokeVoidAsync(
+            "ZXingRegisterOnDecodeListener",
+            DotNetObjectReference.Create(this),
+            nameof(HandleScanResult),
+            nameof(HandleScanResult),
+            mediaDevice.DeviceId,
+            VideoElementId,
+            RescanDelay.TotalMilliseconds
+        );
+        ActiveMediaDevice = mediaDevice;
+        LastActiveMediaDevice = mediaDevice;
+    }
+}

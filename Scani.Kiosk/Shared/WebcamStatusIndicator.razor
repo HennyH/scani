@@ -1,4 +1,5 @@
-﻿@inject IJSRuntime JsRuntime
+﻿@implements IDisposable
+@inject IJSRuntime JsRuntime
 
 <button class="btn btn-dark" @onclick="_ => _isModalVisable = true" style="position: relative;">
     <img src="/assets/images/lens.svg" style="width: 50px" />
@@ -14,7 +15,7 @@
           <span class="visually-hidden">Errored!</span>
         </div>
     }
-    else if (_selectedScanningMediaDevice != null)
+    else if (ZXingScanner.ActiveMediaDevice != null)
     {
         <div class="spinner-grow text-primary" role="status" style="position: absolute; left: calc(50% - 0.5 * 2rem); top: calc(50% - 0.5 * 2rem); background-color: rgba(13, 110, 253, 0.3);">
           <span class="visually-hidden">Scanning...</span>
@@ -28,7 +29,7 @@
     BodyStyle="display: flex; flex-direction: column; justify-items: center; align-items: center; gap: 1em;"
 >
     <Body>
-        @if (_ZXingMediaDevices != null)
+        @if (ZXingScanner.MediaDevices != null)
         {
             <div class="dropdown">
                 <div
@@ -39,26 +40,26 @@
                     data-bs-toggle="dropdown"
                     aria-expanded="false"
                 >
-                    @if (_selectedScanningMediaDevice == null)
+                    @if (ZXingScanner.ActiveMediaDevice == null)
                     {
                         @("No device selected");
                     }
                     else
                     {
-                        @(_selectedScanningMediaDevice.Label);
+                        @(ZXingScanner.ActiveMediaDevice.Label);
                     }
                 </div>
                 <ul class="dropdown-menu" aria-labelledby="mediaDeviceDropdownButton">
-                    @foreach (var mediaDevice in _ZXingMediaDevices)
+                    @foreach (var mediaDevice in ZXingScanner.MediaDevices)
                     {
                         <li @key="mediaDevice.DeviceId">
-                            <a class="dropdown-item" href="#" @onclick="e => EnableScanningWithMediaDevice(mediaDevice)" @onclick:preventDefault>
+                            <a class="dropdown-item" href="#" @onclick="e => EnableWebcamScanningDevice(mediaDevice)" @onclick:preventDefault>
                                 @mediaDevice.Label
                             </a>
                         </li>
                     }
                     <li @key="@("_disable")">
-                        <a class="dropdown-item" href="#" @onclick="e => DisableScanning()" @onclick:preventDefault>
+                        <a class="dropdown-item" href="#" @onclick="e => DisableWebcamScanning()" @onclick:preventDefault>
                             Disable
                         </a>
                     </li>
@@ -66,18 +67,16 @@
             </div>
         }
 
-        @if (_ZXingMediaDevices == null)
+        @if (ZXingScanner.MediaDevices == null)
         {
             <p>There are no video devices detected so webcam scanning will not work.</p>
         }
-        else if (_selectedScanningMediaDevice == null)
+        else if (ZXingScanner.ActiveMediaDevice == null)
         {
             <p>Video scanning has been disabled, select a video device from the above dropdown list to enable video scanning.</p>
         }
-        else
-        {
-            <video @ref="_webcamPreviewVideoElement" width="300" height="200" style="padding: 1em;"></video>   
-        }
+        
+        <video id="webcam-preview" autoplay muted playsinline width="300" height="200" style="padding: 1em; @(ZXingScanner.ActiveMediaDevice == null ? "visability: hidden;" : "")"></video>   
     </Body>
     <Footer>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -85,15 +84,20 @@
 </Modal>
 
 @code {
-    [Parameter] public EventCallback<string> OnZXingResult { get; set; }
-    private IReadOnlyList<MediaDeviceInfo>? _ZXingMediaDevices;
-    private MediaDeviceInfo? _selectedScanningMediaDevice;
-    private bool _firstRenderComplete = false;
+    [CascadingParameter] public ZXingScanner ZXingScanner { get; set; } = null!;
     private bool _showHadScanResultFlash = false;
     private bool _showHadScanErrorFlash = false;
     private bool _isModalVisable = false;
+    private bool _hasHadFirstRender = false;
+    private MediaDeviceInfo? _lastShownMediaDevice;
     private readonly TimeSpan _statusFlashDuration = TimeSpan.FromMilliseconds(600);
-    private ElementReference? _webcamPreviewVideoElement;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        ZXingScanner.ScancodeDetected += HandleScancodeDetected;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -101,72 +105,60 @@
 
         if (firstRender)
         {
-            _ZXingMediaDevices = await JsRuntime.InvokeAsync<List<MediaDeviceInfo>>("ZXingListVideoInputDevices");
-            if (_ZXingMediaDevices.Count > 0)
-            {
-                _selectedScanningMediaDevice = _ZXingMediaDevices[0];
-                await EnableScanningWithMediaDevice(_selectedScanningMediaDevice);
-            }
-            _firstRenderComplete = true;
-            StateHasChanged();
+            _hasHadFirstRender = true;
         }
 
-        if (_webcamPreviewVideoElement != null && _selectedScanningMediaDevice != null)
+        if (_hasHadFirstRender)
         {
-            await ShowWebcamPreviewOfMediaDeviceAsync(_selectedScanningMediaDevice);
+            await UpdateWebcamPreview();
         }
     }
 
-    [JSInvokable]
-    public async Task HandleScanResult(string scancode)
+    private async Task DisplayFlashScanResult()
     {
         _showHadScanResultFlash = true;
         StateHasChanged();
-        await OnZXingResult.InvokeAsync(scancode);
         await Task.Delay(_statusFlashDuration);
         _showHadScanResultFlash = false;
         StateHasChanged();
     }
 
-    [JSInvokable]
-    public async Task HandleScanError(string errorMessage)
+    private async void HandleScancodeDetected(string scancode)
     {
-        _showHadScanErrorFlash = true;
-        StateHasChanged();
-        await Task.Delay(_statusFlashDuration);
-        _showHadScanErrorFlash = false;
-        StateHasChanged();
+        await DisplayFlashScanResult();
     }
 
-    private async Task DisableScanning()
+    private async Task UpdateWebcamPreview()
     {
-        _selectedScanningMediaDevice = null;
-        await JsRuntime.InvokeVoidAsync("ZXingResetCodeReader");
+        if (_hasHadFirstRender
+            && ZXingScanner.ActiveMediaDevice != null
+            && (_lastShownMediaDevice == null || _lastShownMediaDevice.DeviceId != ZXingScanner.ActiveMediaDevice.DeviceId))
+        {
+            await JsRuntime.InvokeVoidAsync(
+                "StreamMediaDeviceIntoVideoElement",
+                "webcam-preview",
+                ZXingScanner.ActiveMediaDevice.DeviceId
+            );
+            _lastShownMediaDevice = ZXingScanner.ActiveMediaDevice;
+        }
     }
 
-    private async Task EnableScanningWithMediaDevice(MediaDeviceInfo mediaDeviceInfo)
+    private async Task DisableWebcamScanning()
     {
-        await JsRuntime.InvokeVoidAsync(
-            "ZXingRegisterOnDecodeListener",
-            DotNetObjectReference.Create(this),
-            nameof(HandleScanResult),
-            nameof(HandleScanResult),
-            mediaDeviceInfo.DeviceId,
-            // this element sites outside of Blazor's control (in a hidden div)
-            // to avoid re-creating the associated video element which causes some
-            // serious issues.
-            "hidden-webcam-scanner-video",
-            3000
-        );
-        _selectedScanningMediaDevice = mediaDeviceInfo;
+        await ZXingScanner.DisableWebCamScanning();
     }
 
-    private async Task ShowWebcamPreviewOfMediaDeviceAsync(MediaDeviceInfo mediaDeviceInfo)
+    private async Task EnableWebcamScanningDevice(MediaDeviceInfo device)
     {
-        await JsRuntime.InvokeVoidAsync(
-            "StreamMediaDeviceIntoVideoElement",
-            _webcamPreviewVideoElement,
-            _selectedScanningMediaDevice.DeviceId
-        );
+        if (ZXingScanner.ActiveMediaDevice == null || device.DeviceId != ZXingScanner.ActiveMediaDevice.DeviceId)
+        {
+            await ZXingScanner.EnableWebCamScanning(device);
+            await UpdateWebcamPreview();
+        }
+    }
+
+    public void Dispose()
+    {
+        ZXingScanner.ScancodeDetected -= HandleScancodeDetected;
     }
 }
