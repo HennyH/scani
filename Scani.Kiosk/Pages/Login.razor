@@ -53,7 +53,10 @@
 
     private async Task HandleLoginFormSubmitted()
     {
-        await TryLoginWithScancode(_scancode);
+        if (!string.IsNullOrWhiteSpace(_scancode))
+        {
+            await TryLoginWithScancode(_scancode);
+        }
     }
 
     public void Dispose()
