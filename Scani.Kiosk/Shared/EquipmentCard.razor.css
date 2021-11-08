@@ -1,10 +1,12 @@
 ﻿.equipment-card {
     display: grid;
-    grid-template-columns: 50px 1fr max-content;
+    grid-template-columns: 1fr max-content;
     background-color: lightsteelblue;
     padding: 0.5em;
     border-radius: 5px;
     align-items: center;
+    opacity: 1;
+    transition: opacity 0.5s;
 }
 
 .name {

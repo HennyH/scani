@@ -2,7 +2,7 @@
 @inject IJSRuntime JsRuntime
 
 <button class="btn btn-dark" @onclick="_ => _isModalVisable = true" style="position: relative;">
-    <img src="/assets/images/lens.svg" style="width: 50px" />
+    <img src="/assets/images/lens.svg" />
     @if (_showHadScanResultFlash)
     {
         <div class="spinner-grow text-success" role="status" style="position: absolute; left: calc(50% - 0.5 * 2rem); top: calc(50% - 0.5 * 2rem);">
@@ -24,6 +24,7 @@
 </button>
 
 <Modal
+    Title="Webcam Scanning"
     IsVisable="_isModalVisable"
     OnModalDismissedFromJs="() => _isModalVisable = false"
     BodyStyle="display: flex; flex-direction: column; justify-items: center; align-items: center; gap: 1em;"

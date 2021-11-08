@@ -1,59 +1,87 @@
-﻿.equipment-checkout-menu {
-    height: 100%;
-    display: grid;
-    grid-auto-flow: row;
-    grid-auto-rows: max-content;
-    padding: 1em;
-    padding-top: 0;
+﻿form {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5em;
 }
 
-.equipment-pools {
-    display: grid;
-    gap: 1em;
-    grid-template-columns: repeat(3, 1fr);
-    align-items: start;
-    padding: 0;
-}
-
-.equipment-pool {
-    display: grid;
-    grid-template-rows: max-content 1fr;
-    border: 1px solid gray;
-    border-radius: 10px;
-    padding: 1em;
-    padding-bottom: 0;
-}
-
-.equipment-pool > * {
-    margin-bottom: 0.5em;
-}
-
-.equipment-pool > h2, .equipment-list > h3 {
-    text-align: center;
-    background-color: antiquewhite;
-    border-radius: 5px;
-    margin-bottom: 0.5em;
-}
-
-form {
-    justify-self: center;
-    border-bottom: 3px dashed black;
-    padding-top: 0.5em;
-    margin-bottom: 1em;
-}
-
-ol, ul {
-    margin: 0;
-    padding: 0;
+ul, ol {
     list-style: none;
+    padding: 0;
 }
 
-.equipment-list > ul {
+#equipment-pools {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1em;
+    margin: 0 0.5em 0.5em 0.5em;
+    padding: 0.5em;
+}
+
+.pool {
+    border: 1px solid gray;
     display: flex;
     flex-direction: column;
-    justify-items: center;
 }
 
-.equipment-list > ul > li {
+h2 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    align-content: center;
+}
+
+h2, h3 {
+    text-align: center;
+}
+
+h3:not(:first-of-type) {
+    margin-top: 0.5em;
+}
+
+.pool > h2 > img {
+    height: 80px;
+}
+
+@media (max-width: 1280px) {
+    #cart-pool {
+        order: -1;
+    }
+
+    #loaned-pool {
+        order: 1;
+    }
+
+    #available-pool {
+        grid-row: span 2;
+    }
+}
+
+.pool {
+    padding: 0.5em;
+}
+
+.pool li:not(:last-child) {
     margin-bottom: 0.5em;
 }
+
+
+@media (max-width: 428px) {
+    .pool > h2 {
+        font-size: 1.5em;
+    }
+
+    .pool > h2 > img {
+        height: 1.5em;
+    }
+
+    #equipment-pools {
+        grid-template-columns: 1fr;
+    }
+    
+    form > label {
+        display: none;
+    }
+}
+

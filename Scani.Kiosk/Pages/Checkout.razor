@@ -21,7 +21,14 @@
                     <img src="/assets/images/tickets.svg" style="height: 50px; margin-left: -0.5em;" />
                 }
                 <span style="position: relative">
-                    <span style="@(_showCheckoutSpinner ? "visibility: hidden" : "")">@_checkoutButtonText</span>
+                    <span style="@(_showCheckoutSpinner ? "visibility: hidden" : "")">
+                        <span class="detailed-text">
+                            @_checkoutButtonText
+                        </span>
+                        <span class="short-text">
+                            Checkout
+                        </span>
+                    </span>
                     @if (_showCheckoutSpinner)
                     {
                         <span class="spinner-border spinner-border-sm" style="position: absolute; left: calc(50% - 0.5 * 1rem); top: calc(50% - 0.5 * 1rem);" role="status" aria-hidden="true"></span>

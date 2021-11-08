@@ -1,9 +1,8 @@
 ﻿<div class="equipment-card">
-    <span class="icon">📷</span>
-    <span class="name">@Equipment.Name</span>
+    <span class="name text-break">@Equipment.Name</span>
     @if (ActionName != null)
     {
-        <button @onclick="() => OnAction.InvokeAsync(Equipment)">
+        <button @onclick="() => OnAction.InvokeAsync(Equipment)" class="text-break">
             @ActionName
         </button>
     }

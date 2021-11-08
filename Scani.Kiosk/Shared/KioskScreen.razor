@@ -2,11 +2,11 @@
 @inject SynchronizedKioskState KioskState
 @inject NavigationManager NavigationManager
 
-<div id="kiosk-screen">
-    <header>
-        <h1 style="margin: 0 auto;">@Title</h1>
+<section id="kiosk-screen">
+    <header class="bg-dark text-white">
+        <h1>@Title</h1>
 
-        <p style="margin: 0 auto;">Welcome, <span class="name">@(ActiveUserState.User?.DisplayName ?? "Anon")</span>!</p>
+        <p class="welcome-message">Welcome, <span class="name">@(ActiveUserState.User?.DisplayName ?? "Anon")</span>!</p>
 
         <WebcamStatusIndicator />
 
@@ -44,7 +44,7 @@
             @Footer   
         }
     </footer>
-</div>
+</section>
 
 
 @code {

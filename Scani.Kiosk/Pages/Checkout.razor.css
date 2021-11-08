@@ -1,9 +1,11 @@
 ﻿.footer {
     height: 100%;
-    display: grid;
-    grid-template-columns: max-content max-content;
+    display: flex;
+    gap: 0.5em;
+    flex-wrap: wrap;
     justify-content: space-between;
     padding: 1em;
+    background-color: lightgray;
 }
 
 ::deep button {
@@ -12,4 +14,18 @@
     align-items: center;
     justify-content: space-between;
     padding-right: 1em;
+}
+
+.short-text {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .detailed-text {
+        display: none
+    }
+
+    .short-text {
+        display: initial;
+    }
 }

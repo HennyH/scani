@@ -2,11 +2,11 @@
 @inject IJSRuntime JsRuntime
 @inject SynchronizedKioskState KioskState
 
-<button type="button" class="btn btn-dark" @onclick="_ => _isModalVisable = true" style="justify-self: flex-end; margin-right: 1em;">
-    <img src="@(_ok ? "/assets/images/okay.svg" : "/assets/images/error.svg")" style="width: 50px" />
+<button type="button" class="btn btn-dark kiosk-state-indicator" @onclick="_ => _isModalVisable = true">
+    <img src="@(_ok ? "/assets/images/okay.svg" : "/assets/images/error.svg")" />
     @if (_lastUpdated.HasValue)
     {
-        <span style="margin-left: 0.5em">Last Updated @(_lastUpdated.Value.ToShortTimeString())</span>
+        <span class="last-updated-time">Last Updated @(_lastUpdated.Value.ToShortTimeString())</span>
     }
 </button>
 

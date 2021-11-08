@@ -1,0 +1,9 @@
+﻿.last-updated-time {
+    margin-left: 0.5em;
+}
+
+@media (max-width: 200em) {
+    .last-updated-time {
+        display: none;
+    }
+}

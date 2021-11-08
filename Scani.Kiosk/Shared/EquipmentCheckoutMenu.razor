@@ -2,112 +2,111 @@
 @inject SynchronizedKioskState KioskState
 @inject Scani.Kiosk.Backends.GoogleSheet.KioskSheetSynchronizer SheetSynchronizer
 
-<div class="equipment-checkout-menu">
-    <form @onclick="HandleManualScancodeFormSubmit" @onclick:preventDefault @onclick:stopPropagation>
-        <label>
-            <img src="assets/images/barcode.svg" style="width: 50px" /> Equipment Scancode:
-            <input required type="text" @bind-value="@_scancode" />
-        </label>
-        <input type="submit" value="Enter" />
-    </form>
-    <ol class="equipment-pools">
-        <li class="equipment-pool">
-            <h2><img src="/assets/images/shop.svg" style="height: 80px" /> Available</h2>
-            @if (_unloanedEquipment != null)
-            {
-                <div class="equipment-list">
-                    <ul>
-                        @foreach (var equipment in _unloanedEquipment)
-                        {
-                            @if (IsEquipmentAvailableForTaking(equipment))
-                            {
-                                <li @key="@equipment.Scancode">
-                                    <EquipmentCard Equipment="@equipment" ActionName="Add to Cart" OnAction="e => _cart.ToggleTake(e)" />
-                                </li>
-                            }
-                        }
-                    </ul>
-                </div>
-            }
-            else
-            {
-                <LoadingSpinner />
-            }
-        </li>
-        <li class="equipment-pool">
-            <h2><img src="/assets/images/basket.svg" style="height: 80px" />Cart</h2>
+<form @onclick="HandleManualScancodeFormSubmit" @onclick:preventDefault @onclick:stopPropagation>
+    <label>Scancode: </label>
+    <img src="assets/images/barcode.svg" style="width: 50px" />
+    <input required type="text" @bind-value="@_scancode" />
+    <input type="submit" value="Enter" />
+</form>
+<ol id="equipment-pools">
+    <li id="available-pool" class="pool">
+        <h2><img src="/assets/images/shop.svg" />Available</h2>
+        @if (_unloanedEquipment == null)
+        {
+            <LoadingSpinner />
+        }
+        else if (_unloanedEquipment.Any(IsEquipmentAvailableForTaking))
+        {
+            <ul>
+                @foreach (var equipment in _unloanedEquipment)
+                {
+                    @if (IsEquipmentAvailableForTaking(equipment))
+                    {
+                        <li @key="@equipment.Scancode">
+                            <EquipmentCard Equipment="@equipment" ActionName="Take" OnAction="e => _cart.ToggleTake(e)" />
+                        </li>
+                    }
+                }
+            </ul>
+
+        }
+        else
+        {
+            <p style="text-align: center;">There is no equipment available for the taking :(</p>
+        }
+    </li>
+    <li id="cart-pool" class="pool">
+        <h2><img src="/assets/images/basket.svg" />Cart</h2>
+        <ol>
             @if (_cart.Takes.Any())
             {
-                <div class="equipment-list">
-                    <h3>Takes</h3>
-                    <ul class="equipment-list">
-                        @foreach (var equipment in _cart.Takes)
-                        {
-                            <li @key="@equipment.Scancode">
-                                <EquipmentCard Equipment="@equipment" ActionName="Remove from Cart" OnAction="e => _cart.ToggleTake(e)" />
-                            </li>
-                        }
-                    </ul>
-                </div>
+                <h3>Takes</h3>
+                <ul>
+                    @foreach (var equipment in _cart.Takes)
+                    {
+                        <li @key="@equipment.Scancode">
+                            <EquipmentCard Equipment="@equipment" ActionName="Remove" OnAction="e => _cart.ToggleTake(e)" />
+                        </li>
+                    }
+                </ul>
             }
             @if (_cart.SelfReturns.Any())
             {
-                <div class="equipment-list">
-                    <h3>Self Returns</h3>
-                    <ul class="equipment-list">
-                        @foreach (var equipment in _cart.SelfReturns)
-                        {
-                            <li @key="@equipment.Scancode">
-                                <EquipmentCard Equipment="@equipment" ActionName="Cancel Return" OnAction="e => _cart.ToggleSelfReturn(e)" />
-                            </li>
-                        }
-                    </ul>
-                </div>
+                <h3>Self Returns</h3>
+                <ul>
+                    @foreach (var equipment in _cart.SelfReturns)
+                    {
+                        <li @key="@equipment.Scancode">
+                            <EquipmentCard Equipment="@equipment" ActionName="Remove" OnAction="e => _cart.ToggleSelfReturn(e)" />
+                        </li>
+                    }
+                </ul>
             }
             @if (_cart.DelegatedReturns.Any())
             {
-                <div class="equipment-list">
-                    <h3>Delegated Returns</h3>
-                    <ul class="equipment-list">
-                        @foreach (var equipment in _cart.DelegatedReturns)
-                        {
-                            <li @key="@equipment.Scancode">
-                                <EquipmentCard Equipment="@equipment" ActionName="Cancel Return" OnAction="e => _cart.ToggleDelegatedReturn(e)" />
-                            </li>
-                        }
-                    </ul>
-                </div>
+                <h3>Delegated Returns</h3>
+                <ul>
+                    @foreach (var equipment in _cart.DelegatedReturns)
+                    {
+                        <li @key="@equipment.Scancode">
+                            <EquipmentCard Equipment="@equipment" ActionName="Remove" OnAction="e => _cart.ToggleDelegatedReturn(e)" />
+                        </li>
+                    }
+                </ul>
             }
-            @if (_cart.IsEmpty)
-            {
-                <p style="text-align: center;">Your cart is empty :(</p>
-            }
-        </li>
-        <li class="equipment-pool">
-            <h2><img src="/assets/images/stuff.svg" style="height: 80px" /> Loaned</h2>
-            @if (_myLoanedEquipment != null)
-            {
-                <div class="equipment-list">
-                    <ul>
-                        @foreach (var equipment in _myLoanedEquipment)
-                        {
-                            @if (!IsEquipmentBeingReturned(equipment))
-                            {
-                                <li @key="@equipment.Scancode">
-                                    <EquipmentCard Equipment="@equipment" />
-                                </li>
-                            }
-                        }
-                    </ul>
-                </div>
-            }
-            else
-            {
-                <LoadingSpinner />
-            }
-        </li>
-    </ol>
-</div>
+        </ol>
+        @if (_cart.IsEmpty)
+        {
+            <p style="text-align: center;">Your cart is empty :(</p>
+        }
+    </li>
+    <li id="loaned-pool" class="pool">
+        <h2><img src="/assets/images/stuff.svg" />Loaned</h2>
+        @if (_myLoanedEquipment == null)
+        {
+            <LoadingSpinner />
+        }
+        else if (_myLoanedEquipment.Any(e => !IsEquipmentBeingReturned(e)))
+        {
+            <ul>
+                @foreach (var equipment in _myLoanedEquipment)
+                {
+                    @if (!IsEquipmentBeingReturned(equipment))
+                    {
+                        <li @key="@equipment.Scancode">
+                            <EquipmentCard Equipment="@equipment" />
+                        </li>
+                    }
+                }
+            </ul>
+        }
+        else
+        {
+            <p style="text-align: center;">You aren't loaning any items at the moment.</p>
+        }
+    </li>
+</ol>
+
 
 @code {
     [Parameter] public EventCallback<EquipmentCheckoutCart> OnCartChanged { get; set; } = EventCallback<EquipmentCheckoutCart>.Empty;
