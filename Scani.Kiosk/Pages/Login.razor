@@ -57,6 +57,10 @@
         {
             await TryLoginWithScancode(_scancode);
         }
+        else
+        {
+            _loginErrorMessage = "Please enter valid name, email, or scancode";
+        }
     }
 
     public void Dispose()
