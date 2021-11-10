@@ -12,7 +12,9 @@ namespace Scani.Kiosk.Backends.GoogleSheet
         private readonly TimeSpan _syncInterval;
         private readonly KioskSheetReaderWriter _kioskSheetReaderWriter;
         private readonly SynchronizedKioskState _kioskState;
+        private readonly CancellationTokenSource _stoppingCts = new();
         private int _executionCount = 0;
+        private Task? _executingTask;
         private Timer? _timer;
 
         public KioskSheetSynchronizer(
@@ -27,7 +29,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
             this._kioskState = kioskState;
         }
 
-        private async void PerformSynchronization(object? _)
+        private async Task PerformSynchronizationAsync()
         {
             try
             {
@@ -49,6 +51,12 @@ namespace Scani.Kiosk.Backends.GoogleSheet
             _timer?.Change((int)_syncInterval.TotalMilliseconds, Timeout.Infinite);
         }
 
+        private void PerformSynchronization(object? _)
+        {
+            _timer?.Change(Timeout.Infinite, 0);
+            _executingTask = PerformSynchronizationAsync();
+        }
+
         public Task StartAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Attempting to connect to google sheets API");
@@ -59,11 +67,21 @@ namespace Scani.Kiosk.Backends.GoogleSheet
             return Task.CompletedTask;
         }
 
-        public Task StopAsync(CancellationToken cancellationToken)
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Stopping synchronization of kiosk google sheet.");
             _timer?.Change(Timeout.Infinite, 0);
-            return Task.CompletedTask;
+            if (_executingTask != null)
+            {
+                try
+                {
+                    _stoppingCts.Cancel();
+                }
+                finally
+                {
+                    await Task.WhenAny(_executingTask, Task.Delay(Timeout.Infinite, cancellationToken)).ConfigureAwait(false);
+                }
+            }
         }
 
         public void Dispose()

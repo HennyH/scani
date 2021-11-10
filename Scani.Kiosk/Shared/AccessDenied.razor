@@ -5,7 +5,7 @@
     <h5>Access Denied</h5>
     <p>
         Sorry
-        <span style="font-weight: bold;">@(ActiveUserState.HasActiveUser ? ActiveUserState.User.DisplayName : "Anon")</span>
+        <span style="font-weight: bold;">@(ActiveUserState.HasActiveUser ? ActiveUserState.User!.DisplayName : "Anon")</span>
         , but you don't have permission to access this page.
     </p>
     <a class="btn btn-primary" @onclick="@(() => NavigationManager.NavigateTo("/"))">

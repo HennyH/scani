@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.Threading;
 using Scani.Kiosk.Backends.GoogleSheets.Sheets;
 using Scani.Kiosk.Backends.GoogleSheets.Sheets.Models;
+using Scani.Kiosk.Helpers;
 using System.Collections.Concurrent;
 
 namespace Scani.Kiosk.Backends.GoogleSheet
@@ -12,6 +13,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
         public KioskSheetReadResult<LoanRow>? LoanSheet { get; set; }
         public DateTime? LastModified { get; set; }
 
+        public bool HasLoaded => StudentsSheet != null && EquipmentSheet != null && LoanSheet != null;
         public IEnumerable<EquipmentRow> Equipment => EquipmentSheet?.Rows?.ToList() ?? new List<EquipmentRow>();
         public IEnumerable<StudentRow> Students => StudentsSheet
             ?.Rows
@@ -56,9 +58,11 @@ namespace Scani.Kiosk.Backends.GoogleSheet
     public class SynchronizedKioskState : IDisposable
     {
         private GoogleSheetKioskState _state = new();
+#pragma warning disable VSTHRD012 // Provide JoinableTaskFactory where allowed
         private readonly AsyncReaderWriterLock _stateLock = new AsyncReaderWriterLock();
+#pragma warning restore VSTHRD012 // Provide JoinableTaskFactory where allowed
 
-        public event Action? StateChanged;
+        public event Func<Task>? StateChanged;
 
         public async Task<R> ReadStateAsync<R>(Func<GoogleSheetKioskState, Task<R>> action)
         {
@@ -99,7 +103,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
                 await writeLock.ReleaseAsync();
             }
 
-            StateChanged?.Invoke();
+            await StateChanged.InvokeAllAsync();
         }
 
         public void Dispose()

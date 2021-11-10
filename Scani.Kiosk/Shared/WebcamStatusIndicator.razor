@@ -97,7 +97,7 @@
     {
         base.OnInitialized();
 
-        ZXingScanner.ScancodeDetected += HandleScancodeDetected;
+        ZXingScanner.ScancodeDetected += HandleScancodeDetectedAsync;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -124,7 +124,7 @@
         StateHasChanged();
     }
 
-    private async void HandleScancodeDetected(string scancode)
+    private async Task HandleScancodeDetectedAsync(string scancode)
     {
         await DisplayFlashScanResult();
     }
@@ -160,6 +160,6 @@
 
     public void Dispose()
     {
-        ZXingScanner.ScancodeDetected -= HandleScancodeDetected;
+        ZXingScanner.ScancodeDetected -= HandleScancodeDetectedAsync;
     }
 }

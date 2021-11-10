@@ -13,17 +13,17 @@
     protected override void OnInitialized()
     {
         _activeUserState = _activeUserService.ActiveUserState;
-        _activeUserService.ActiveUserChanged += OnActiveUserChanged;
+        _activeUserService.ActiveUserChanged += OnActiveUserChangedAsync;
     }
 
-    private void OnActiveUserChanged(ActiveUserState newUserState)
+    private async Task OnActiveUserChangedAsync(ActiveUserState newUserState)
     {
         _activeUserState = newUserState;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
     {
-        _activeUserService.ActiveUserChanged -= OnActiveUserChanged;
+        _activeUserService.ActiveUserChanged -= OnActiveUserChangedAsync;
     }
 }

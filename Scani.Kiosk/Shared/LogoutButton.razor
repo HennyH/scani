@@ -12,7 +12,7 @@
 
     private async Task HandleExitClicked()
     {
-        ActiveUserService.LogoutActiveUser();
+        await ActiveUserService.LogoutActiveUserAsync();
         await OnLogout.InvokeAsync();
         NavigationManager.NavigateTo("/");
     }

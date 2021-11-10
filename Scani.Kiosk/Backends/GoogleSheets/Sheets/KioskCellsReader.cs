@@ -15,11 +15,11 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
         {
             var expectedColumns = GetExpectedColumns<T>();
             var maxExpectedColumnNumber = expectedColumns.Max(ec => ec.ColumnNumber);
-            var result = new KioskSheetReadResult<T>()
+            var result = new KioskSheetReadResult<T>(
+                sheetName: sheetName,
+                dataRowNumberToRange: rowNumber => $"{sheetName}!A{rowNumber}:{GetExcelColumnName(maxExpectedColumnNumber)}{rowNumber}")
             {
-                SheetName = sheetName,
-                NextDataRowNumber = Math.Max(dataHeaderRowNumber + 1, cells.Count + 1),
-                DataRowNumberToRange = rowNumber => $"{sheetName}!A{rowNumber}:{GetExcelColumnName(maxExpectedColumnNumber)}{rowNumber}"
+                NextDataRowNumber = Math.Max(dataHeaderRowNumber + 1, cells.Count + 1)
             };
 
             if (cells.Count < numberOfHeaderRows)

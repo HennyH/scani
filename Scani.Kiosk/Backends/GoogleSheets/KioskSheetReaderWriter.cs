@@ -1,6 +1,5 @@
 ﻿using Google.Apis.Sheets.v4;
 using Microsoft.VisualStudio.Threading;
-using Scani.Kiosk.Helpers;
 using Scani.Kiosk.Backends.GoogleSheets.Sheets;
 using Scani.Kiosk.Backends.GoogleSheets.Sheets.Models;
 using Google.Apis.Util;
@@ -9,7 +8,9 @@ namespace Scani.Kiosk.Backends.GoogleSheet
 {
     public class KioskSheetReaderWriter
     {
+#pragma warning disable VSTHRD012 // Provide JoinableTaskFactory where allowed
         private readonly AsyncReaderWriterLock _sheetLock = new();
+#pragma warning restore VSTHRD012 // Provide JoinableTaskFactory where allowed
         private readonly ILogger<KioskSheetReaderWriter> _logger;
         private readonly string _sheetId;
         private readonly ThrottledKioskSheetAccessor _sheetsAccessor;

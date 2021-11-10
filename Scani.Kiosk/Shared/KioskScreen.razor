@@ -14,14 +14,8 @@
         {
             <KioskStateStatusIndicator />
         }
-        else
-        {
-            <div style="justify-self: flex-end; margin-right: 1em;">
-                <LoadingSpinner />
-            </div>
-        }
     </header>
-    <main style="@(_loaded ? "" : "display: grid; justify-items: center; align-items: center")">
+    <main style="@(_loaded ? MainStyle : "display: grid; justify-items: center; align-items: center")">
         @if (_loaded)
         {
             @if (ActiveUserState.HasActiveUser || AllowAnonymous)
@@ -52,18 +46,14 @@
     [Parameter] public RenderFragment? Footer { get; set; }
     [Parameter] public RenderFragment? Screen { get; set; }
     [Parameter] public bool AllowAnonymous { get; set; } = false;
+    [Parameter] public string? MainStyle { get; set; }
     [CascadingParameter] public ActiveUserState ActiveUserState { get; set; } = null!;
     private bool _loaded = false;
 
     protected override async Task OnInitializedAsync()
     {
         base.OnInitialized();
-        await KioskState.ReadStateAsync(async state =>
-        {
-            _loaded = state.StudentsSheet != null
-                      && state.EquipmentSheet != null
-                      && state.LoanSheet != null;
-        });
+        await HandleKioskStateChanged();
         KioskState.StateChanged += HandleKioskStateChanged;
     }
 
@@ -77,15 +67,21 @@
         }
     }
 
-    private async void HandleKioskStateChanged()
+    private async Task HandleKioskStateChanged()
     {
-        await KioskState.ReadStateAsync(async state =>
+        if (!_loaded)
         {
-            _loaded = state.StudentsSheet != null
-                      && state.EquipmentSheet != null
-                      && state.LoanSheet != null;
-            await InvokeAsync(StateHasChanged);
-        });
+            await KioskState.ReadStateAsync(state =>
+            {
+                _loaded = state.HasLoaded;
+                return Task.CompletedTask;
+            });
+
+            if (_loaded)
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+        }
     }
 
     public void Dispose()

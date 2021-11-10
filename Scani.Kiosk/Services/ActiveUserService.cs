@@ -1,4 +1,5 @@
 ﻿using Scani.Kiosk.Backends.GoogleSheets.Sheets.Models;
+using Scani.Kiosk.Helpers;
 
 namespace Scani.Kiosk.Services;
 
@@ -27,17 +28,17 @@ public record ActiveUserState
 public class ActiveUserService
 {
     public ActiveUserState ActiveUserState { get; private set; } = new ActiveUserState();
-    public event Action<ActiveUserState>? ActiveUserChanged;
+    public event Func<ActiveUserState, Task>? ActiveUserChanged;
 
-    public void SetActiveUser(StudentRow userInfo)
+    public async Task SetActiveUserAsync(StudentRow userInfo)
     {
         ActiveUserState = new ActiveUserState(userInfo);
-        ActiveUserChanged?.Invoke(ActiveUserState);
+        await ActiveUserChanged.InvokeAllAsync(ActiveUserState);
     }
 
-    public void LogoutActiveUser()
+    public async Task LogoutActiveUserAsync()
     {
         ActiveUserState = new ActiveUserState();
-        ActiveUserChanged?.Invoke(ActiveUserState);
+        await ActiveUserChanged.InvokeAllAsync(ActiveUserState);
     }
 }

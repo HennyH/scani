@@ -5,6 +5,12 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
     public class KioskSheetReadResult<T>
         where T : ISheetRow
     {
+        public KioskSheetReadResult(string sheetName, Func<int, string> dataRowNumberToRange)
+        {
+            this.SheetName = sheetName;
+            this.DataRowNumberToRange = dataRowNumberToRange;
+        }
+
         public string SheetName { get; set; }
         public bool Ok { get; set; }
         public ICollection<T> Rows { get; set; } = new List<T>();

@@ -1,7 +1,7 @@
 ﻿@inject IJSRuntime JsRuntime
 @inject ILogger<ZXingScanner> Logger
 
-<CascadingValue Value="this">
+<CascadingValue Value="this" IsFixed="true">
     @ChildContent
 </CascadingValue>
 
@@ -13,7 +13,7 @@
     public IReadOnlyList<MediaDeviceInfo>? MediaDevices { get; private set; }
     public MediaDeviceInfo? ActiveMediaDevice { get; private set; }
     public MediaDeviceInfo? LastActiveMediaDevice { get; private set; }
-    public event Action<string>? ScancodeDetected;
+    public event Func<string, Task>? ScancodeDetected;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -38,16 +38,16 @@
     }
 
     [JSInvokable]
-    public void HandleScanResult(string scancode)
+    public async Task HandleScanResult(string scancode)
     {
-        ScancodeDetected?.Invoke(scancode);
+        await ScancodeDetected.InvokeAllAsync(scancode);
     }
 
     [JSInvokable]
-    public void HandleKeySequenceEntered(IReadOnlyCollection<string> keys)
+    public async Task HandleKeySequenceEntered(IReadOnlyCollection<string> keys)
     {
         Logger.LogInformation("Key sequence entered: {0}", keys);
-        HandleScanResult(string.Join(string.Empty, keys));
+        await HandleScanResult(string.Join(string.Empty, keys));
     }
 
     public async Task DisableWebCamScanning()

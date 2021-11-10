@@ -5,6 +5,7 @@
 @inject NavigationManager NavigationManager
 @inject ThrottledKioskSheetAccessor SheetsAccessor
 @inject ActiveUserService ActiveUserService
+@inject ILogger<Checkout> Logger
 
 <PageTitle>Kiosk - Checkout</PageTitle>
 
@@ -23,7 +24,7 @@
                 <span style="position: relative">
                     <span style="@(_showCheckoutSpinner ? "visibility: hidden" : "")">
                         <span class="detailed-text">
-                            @_checkoutButtonText
+                            @(_cart?.CheckoutDisplayText ?? "Checkout")
                         </span>
                         <span class="short-text">
                             Checkout
@@ -43,9 +44,7 @@
     [CascadingParameter] ActiveUserState ActiveUserState { get; set; } = null!;
     [CascadingParameter] public ZXingScanner ZXingScanner { get; set; } = null!;
 
-    private const string DEFAULT_CHECKOUT_BTN_TEXT = "Checkout Items";
     private EquipmentCheckoutCart? _cart;
-    private string _checkoutButtonText = DEFAULT_CHECKOUT_BTN_TEXT;
     private string? _sheetId;
     private bool _showCheckoutSpinner = false;
     private EquipmentCheckoutMenu? _checkoutMenu;
@@ -58,7 +57,7 @@
         ZXingScanner.ScancodeDetected += HandleScancodeDetected;
     }
 
-    private async void HandleScancodeDetected(string scancode)
+    private async Task HandleScancodeDetected(string scancode)
     {
         if (_checkoutMenu != null)
         {
@@ -69,28 +68,6 @@
     protected void HandleCartChanged(EquipmentCheckoutCart cart)
     {
         _cart = cart;
-
-        var sb = new StringBuilder();
-        if (_cart.IsEmpty)
-        {
-            sb.Append(DEFAULT_CHECKOUT_BTN_TEXT);
-        }
-        else
-        {
-            if (_cart.Takes.Any())
-            {
-                sb.Append($"Checkout {_cart.Takes.Count()} items");
-                if (_cart.Returns.Any())
-                {
-                    sb.Append(", ");
-                }
-            }
-            if (_cart.Returns.Any())
-            {
-                sb.Append($"Return {_cart.Returns.Count()} items");
-            }
-        }
-        _checkoutButtonText = sb.ToString();
     }
 
     protected async Task HandleCheckout()
@@ -111,51 +88,63 @@
             if (_cart.Returns.Any())
             {
                 var returnScancodes = _cart.Returns.Select(e => e.Scancode).ToHashSet();
-                await KioskState.ReadStateAsync(async state =>
-                {
-                    var loansToUpdate = new List<LoanRow>();
-                    foreach (var loan in state.ActiveLoans)
-                    {
-                        if (returnScancodes.Contains(loan.EquipmentScancode))
-                        {
-                            loan.ReturnedDate = now;
-                            loansToUpdate.Add(loan);
-                        }
-                    }
-
-                    await KioskSheetRowWriter.UpdateRowsAsync(_sheetId!, "Loans", SheetsAccessor, loansToUpdate);
-                });
+                await ReturnEquipment(returnScancodes, now);
             }
 
             if (_cart.Takes.Any())
             {
-                await KioskState.ReadStateAsync(async state =>
-                {
-                // TODO improve erro handling
-                if (state.LoanSheet != null)
-                    {
-                        var newLoans = _cart.Takes
-                        .Select(e => new LoanRow(ActiveUserState.User.Scancode, e.Scancode, now.ToString(), state.LoanSheet))
-                        .ToList();
-
-                        foreach (var loan in newLoans)
-                        {
-                            state.LoanSheet.Rows.Add(loan);
-                        }
-
-                        await KioskSheetRowWriter.UpdateRowsAsync(_sheetId!, "Loans", SheetsAccessor, newLoans);
-                    }
-                });
+                var takeScancdodes = _cart.Takes.Select(e => e.Scancode).ToList();
+                await TakeEquipment(takeScancdodes, now);
             }
 
-            ActiveUserService.LogoutActiveUser();
+            await ActiveUserService.LogoutActiveUserAsync();
             NavigationManager.NavigateTo("/");
         }
-        // TODO improve error handling
-        catch (Exception _)
+        catch (Exception error)
         {
             _showCheckoutSpinner = false;
+            Logger.LogError(error, "An error occured whilst saving a checkout cart to the google sheet.");
         }
+    }
+
+    private async Task ReturnEquipment(IReadOnlyCollection<string> equipmentScancodes, DateTime? returnDate = null)
+    {
+        var now = DateTime.Now;
+        await KioskState.ReadStateAsync(async state =>
+        {
+            var associatedLoans = state.ActiveLoans
+                .Where(l => equipmentScancodes.Contains(l.StudentScancode))
+                .ToList();
+
+            foreach (var loan in associatedLoans)
+            {
+                loan.ReturnedDate = returnDate ?? now;
+            }
+
+            await KioskSheetRowWriter.UpdateRowsAsync(_sheetId!, "Loans", SheetsAccessor, associatedLoans);
+        });
+    }
+
+    private async Task TakeEquipment(IReadOnlyCollection<string> equipmentScancodes, DateTime? takeDate = null)
+    {
+        var now = DateTime.Now;
+
+        await KioskState.ReadStateAsync(async state =>
+        {
+            /* We can't create a loan until we have the loan sheet and an active user, this method shouldn't ever be called unless we have both of those though... */
+            if (state.LoanSheet == null || ActiveUserState.User == null) return;
+
+            var newLoans = equipmentScancodes
+                .Select(scancode => new LoanRow(ActiveUserState.User.Scancode, scancode, takeDate ?? now, state.LoanSheet))
+                .ToList();
+
+            foreach (var loan in newLoans)
+            {
+                state.LoanSheet.Rows.Add(loan);
+            }
+
+            await KioskSheetRowWriter.UpdateRowsAsync(_sheetId!, "Loans", SheetsAccessor, newLoans);
+        });
     }
 
     public void Dispose()

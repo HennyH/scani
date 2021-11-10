@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
@@ -27,6 +28,10 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
             this.LoanDateText = loanDateText;
             this.Range = loanSheet.DataRowNumberToRange(Interlocked.Increment(ref loanSheet.NextDataRowNumber) - 1);
         }
+
+        public LoanRow(string studentScancode, string equipmentScancode, DateTime loanDate, KioskSheetReadResult<LoanRow> loanSheet)
+            : this(studentScancode, equipmentScancode, loanDate.ToString(), loanSheet)
+        { }
 
         [Column("ID", Order = 1)]
         [Required]

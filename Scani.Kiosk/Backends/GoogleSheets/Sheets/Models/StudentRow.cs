@@ -39,7 +39,7 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
         public string GeneratedScancode { get; set; }
 
         [Column("Deactive User? (Y)", Order = 6)]
-        public string DeactiveUserText { get; set; }
+        public string? DeactiveUserText { get; set; }
 
         public bool IsActiveUser => string.IsNullOrWhiteSpace(DeactiveUserText) || !(DeactiveUserText == "Y" || DeactiveUserText == "Yes" || DeactiveUserText == "True" || DeactiveUserText == "true");
 
@@ -47,6 +47,6 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
 
         public string Range { get; set; }
 
-        public IDictionary<string, string?> FlexFields { get; set; } = new Dictionary<string, string>();
+        public IDictionary<string, string?> FlexFields { get; set; } = new Dictionary<string, string?>();
     }
 }

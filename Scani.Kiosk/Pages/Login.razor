@@ -4,20 +4,31 @@
 @inject NavigationManager NavigationManager
 @inject ActiveUserService ActiveUserService
 
-<KioskScreen AllowAnonymous="true">
+<KioskScreen AllowAnonymous="true" MainStyle="display: flex; flex-direction: column; justify-content: center; align-items: center;">
     <Screen>
-        <form @onsubmit="@HandleLoginFormSubmitted">
-            <ScannerImage />
-            <label>
-                Name or Scancode:
-                <input type="text" @bind-value="@_scancode" />
-            </label>
-            <input type="submit" value="Login" />
-            @if (_loginErrorMessage != null)
-            {
-                <p class="validation-message">@_loginErrorMessage</p>
-            }
-        </form>
+        <section class="screen">
+            <form @onsubmit="@HandleLoginFormSubmitted">
+                <ScannerImage />
+                <label>
+                    Name or Scancode:
+                    <input type="text" @bind-value="@_scancode" />
+                </label>
+                <input type="submit" value="Login" />
+                @if (_loginErrorMessage != null)
+                {
+                    <p class="validation-message">@_loginErrorMessage</p>
+                }
+            </form>
+            <p>
+                Welcome to the Kiosk, you can use this system to loan equipment. To get started you need to tell the system who you are by choosing to do one of the following options:
+            </p>
+            <ul>
+                <li>Enter your email address into the form above.</li>
+                <li>Enter your student scancode into the form above.</li>
+                <li>Use a barcode scanner attached to this system to scan your student scancode.</li>
+                <li>Use a QR code scanner attached to this system to scan your student scancode.</li>
+            </ul>
+        </section>
     </Screen>
 </KioskScreen>
 
@@ -30,7 +41,7 @@
     {
         base.OnInitialized();
 
-        ZXingScanner.ScancodeDetected += HandleScancodeDetected;
+        ZXingScanner.ScancodeDetected += HandleScancodeDetectedAsync;
     }
 
     private async Task TryLoginWithScancode(string scancode)
@@ -41,12 +52,12 @@
             : null;
         if (user != null)
         {
-            ActiveUserService.SetActiveUser(user);
+            await ActiveUserService.SetActiveUserAsync(user);
             NavigationManager.NavigateTo("/checkout");
         }
     }
 
-    private async void HandleScancodeDetected(string scancode)
+    private async Task HandleScancodeDetectedAsync(string scancode)
     {
         await TryLoginWithScancode(scancode);
     }
@@ -65,6 +76,6 @@
 
     public void Dispose()
     {
-        ZXingScanner.ScancodeDetected -= HandleScancodeDetected;
+        ZXingScanner.ScancodeDetected -= HandleScancodeDetectedAsync;
     }
 }

@@ -73,17 +73,18 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await KioskState.ReadStateAsync(async state =>
+        await KioskState.ReadStateAsync(state =>
         {
             _loanErrors = state.LoanSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
             _studentErrors = state.StudentsSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
             _equipmentErrors = state.EquipmentSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
             _lastUpdated = state.LastModified;
+            return Task.CompletedTask;
         });
         KioskState.StateChanged += HandleKioskStateChanged;
     }
 
-    protected async void HandleKioskStateChanged()
+    protected async Task HandleKioskStateChanged()
     {
         await KioskState.ReadStateAsync(async state =>
         {

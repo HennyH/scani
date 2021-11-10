@@ -10,3 +10,15 @@
 ::deep img {
     justify-self: center;
 }
+
+.screen {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+::deep p {
+    margin-top: 1em;
+    max-width: 60%;
+}

@@ -34,6 +34,11 @@
     overflow-y: auto;
 }
 
+.name {
+    font-weight: bold;
+    color: lightcoral;
+}
+
 @media (max-width: 420px) {
     .welcome-message {
         display: none;
