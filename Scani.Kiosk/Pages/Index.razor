@@ -3,7 +3,9 @@
 @inject ActiveUserService ActiveUserService
 
 <PageTitle>Kiosk</PageTitle>
-<LoadingSpinner />
+<div style="display: grid; justify-items: center; align-items: center">
+    <LoadingSpinner />
+</div>
 
 @code {
     [CascadingParameter] public ActiveUserState ActiveUserState { get; set; } = null!;

@@ -2,7 +2,7 @@
     <span class="name text-break">@Equipment.Name</span>
     @if (ActionName != null)
     {
-        <button @onclick="() => OnAction.InvokeAsync(Equipment)" class="text-break">
+        <button @onclick="() => OnAction.InvokeAsync(Equipment)" class="text-break btn btn-secondary">
             @ActionName
         </button>
     }
