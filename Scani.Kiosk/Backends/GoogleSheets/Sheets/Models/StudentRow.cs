@@ -38,6 +38,11 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
         [Required]
         public string GeneratedScancode { get; set; }
 
+        [Column("Deactive User? (Y)", Order = 6)]
+        public string DeactiveUserText { get; set; }
+
+        public bool IsActiveUser => string.IsNullOrWhiteSpace(DeactiveUserText) || !(DeactiveUserText == "Y" || DeactiveUserText == "Yes" || DeactiveUserText == "True" || DeactiveUserText == "true");
+
         public string Scancode => string.IsNullOrWhiteSpace(CustomScancode) ? GeneratedScancode : CustomScancode;
 
         public string Range { get; set; }

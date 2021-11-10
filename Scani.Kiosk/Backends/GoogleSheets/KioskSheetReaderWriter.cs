@@ -79,7 +79,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
                 sheetCells[0],
                 2,
                 2,
-                (2, 6));
+                (2, 7));
             var equipment = KioskCellsReader.ParseCells<EquipmentRow>(
                 _logger,
                 "Equipment",

@@ -31,7 +31,7 @@
 
 #kiosk-screen > main {
     margin-top: 0.5em;
-    overflow: scroll;
+    overflow-y: auto;
 }
 
 @media (max-width: 420px) {

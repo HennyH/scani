@@ -13,19 +13,22 @@ namespace Scani.Kiosk.Backends.GoogleSheet
         public DateTime? LastModified { get; set; }
 
         public IEnumerable<EquipmentRow> Equipment => EquipmentSheet?.Rows?.ToList() ?? new List<EquipmentRow>();
-        public IEnumerable<StudentRow> Students => StudentsSheet?.Rows?.ToList() ?? new List<StudentRow>();
+        public IEnumerable<StudentRow> Students => StudentsSheet
+            ?.Rows
+            ?.Where(s => s.IsActiveUser)
+            ?.ToList() ?? new List<StudentRow>();
         public IEnumerable<LoanRow> Loans => LoanSheet?.Rows?.ToList() ?? new List<LoanRow>();
         public IEnumerable<LoanRow> ActiveLoans => Loans.Where(l => !l.ReturnedDate.HasValue).ToList();
-        public IEnumerable<EquipmentRow> UnloanedEquipment => EquipmentSheet
-            ?.Rows
+        public IEnumerable<EquipmentRow> UnloanedEquipment =>
+            Equipment
             ?.Where(e =>
                 LoanSheet != null
                 && !LoanSheet.Rows.Any(l => !l.ReturnedDate.HasValue && l.EquipmentScancode == e.Scancode))
             ?.ToList()
             ?? new List<EquipmentRow>();
 
-        public IEnumerable<EquipmentRow> EquipmentLoanedToUser(string userScancode) => EquipmentSheet
-            ?.Rows
+        public IEnumerable<EquipmentRow> EquipmentLoanedToUser(string userScancode) =>
+            Equipment
             ?.Where(e =>
                 LoanSheet != null
                 && LoanSheet.Rows.Any(l =>
@@ -35,16 +38,16 @@ namespace Scani.Kiosk.Backends.GoogleSheet
             ?.ToList()
             ?? new List<EquipmentRow>();
 
-        public EquipmentRow? EquipmentWithScancode(string equipmentScancode) => EquipmentSheet
-            ?.Rows
+        public EquipmentRow? EquipmentWithScancode(string equipmentScancode) => 
+            Equipment
             ?.SingleOrDefault(e => e.Scancode == equipmentScancode);
 
-        public StudentRow? StudentWithScancode(string studentScancode) => StudentsSheet
-            ?.Rows
+        public StudentRow? StudentWithScancode(string studentScancode) =>
+            Students
             ?.SingleOrDefault(s => s.Email == studentScancode || s.Scancode == studentScancode);
 
-        public IEnumerable<LoanRow> ActiveLoansForUser(string userScancode) => LoanSheet
-            ?.Rows
+        public IEnumerable<LoanRow> ActiveLoansForUser(string userScancode) =>
+            Loans
             ?.Where(l => !l.ReturnedDate.HasValue && l.StudentScancode == userScancode)
             ?.ToList()
             ?? new List<LoanRow>();
