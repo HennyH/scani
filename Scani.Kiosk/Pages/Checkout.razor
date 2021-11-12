@@ -113,7 +113,7 @@
         await KioskState.ReadStateAsync(async state =>
         {
             var associatedLoans = state.ActiveLoans
-                .Where(l => equipmentScancodes.Contains(l.StudentScancode))
+                .Where(l => equipmentScancodes.Contains(l.EquipmentScancode))
                 .ToList();
 
             foreach (var loan in associatedLoans)
