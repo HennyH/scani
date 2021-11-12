@@ -18,6 +18,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
         private readonly Lazy<Task<ThrottledAccessor<SheetsService>>> _lazyThrottledAccessor;
 
         public ThrottledKioskSheetAccessor(
+                ILogger<ThrottledAccessor<SheetsService>> logger,
                 IConfiguration configuration,
                 CancellationToken cancellationToken = default)
         {
@@ -25,7 +26,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
             this._appName = configuration.GetValue<string>("GoogleSheet:AppName");
             this._cancellationToken = cancellationToken;
 #pragma warning disable VSTHRD011 // Use AsyncLazy<T>
-            this._lazyThrottledAccessor = new Lazy<Task<ThrottledAccessor<SheetsService>>>(async () => new ThrottledAccessor<SheetsService>(await CreateSheetsServiceAsync(), 100, TimeSpan.FromMinutes(1)));
+            this._lazyThrottledAccessor = new Lazy<Task<ThrottledAccessor<SheetsService>>>(async () => new ThrottledAccessor<SheetsService>(logger, await CreateSheetsServiceAsync(), 100, TimeSpan.FromMinutes(1)));
 #pragma warning restore VSTHRD011 // Use AsyncLazy<T>
         }
 
