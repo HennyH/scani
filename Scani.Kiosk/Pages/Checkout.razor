@@ -80,7 +80,7 @@
         if (_cart.Returns.Any() || _cart.Takes.Any())
         {
             _showCheckoutSpinner = true;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
 
         try

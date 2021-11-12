@@ -12,6 +12,6 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
 
         public T Row { get; set; }
         public bool Ok { get; set; }
-        public List<KioskSheetWriteError> Errors { get; set; } = new List<KioskSheetWriteError>();
+        public ICollection<KioskSheetWriteError> Errors { get; } = new List<KioskSheetWriteError>();
     }
 }

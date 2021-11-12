@@ -1,7 +1,9 @@
 using Scani.Kiosk.Backends.GoogleSheet;
 using Scani.Kiosk.Services;
 
+#pragma warning disable CA1812
 var builder = WebApplication.CreateBuilder(args);
+#pragma warning restore CA1812
 
 // Add services to the container.
 builder.Services.AddRazorPages();

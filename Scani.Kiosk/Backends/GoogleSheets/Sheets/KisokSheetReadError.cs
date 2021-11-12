@@ -21,7 +21,7 @@
         public KioskSheetReadErrorType ErrorType { get; }
         public string Message { get; }
 
-        public KioskSheetReadError(KioskSheetReadErrorType errorType, string sheetName, string message)
+        protected KioskSheetReadError(KioskSheetReadErrorType errorType, string sheetName, string message)
         {
             this.SheetName = sheetName;
             this.ErrorType = errorType;

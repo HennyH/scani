@@ -13,9 +13,10 @@ namespace Scani.Kiosk.Backends.GoogleSheet
         private readonly KioskSheetReaderWriter _kioskSheetReaderWriter;
         private readonly SynchronizedKioskState _kioskState;
         private readonly CancellationTokenSource _stoppingCts = new();
-        private int _executionCount = 0;
+        private int _executionCount;
         private Task? _executingTask;
         private Timer? _timer;
+        private bool _isDisposed;
 
         public KioskSheetSynchronizer(
                 ILogger<KioskSheetSynchronizer> logger,
@@ -31,22 +32,24 @@ namespace Scani.Kiosk.Backends.GoogleSheet
 
         private async Task PerformSynchronizationAsync()
         {
+#pragma warning disable CA1031 // Do not catch general exception types
             try
             {
-                _logger.LogInformation("Performing synchronization #{} on thread {}", _executionCount++, Thread.CurrentThread.ManagedThreadId);
+                _logger.LogInformation("Performing synchronization #{} on thread {}", _executionCount++, Environment.CurrentManagedThreadId);
 
-                var nextState = await _kioskSheetReaderWriter.ReadAsync();
+                var nextState = await _kioskSheetReaderWriter.ReadAsync().ConfigureAwait(false);
                 await _kioskState.ReduceStateAsync(prevState => Task.FromResult(new GoogleSheetKioskState
                 {
                     StudentsSheet = nextState.StudentsSheet,
                     EquipmentSheet = nextState.EquipmentSheet,
                     LoanSheet = prevState?.LoanSheet != null? prevState.LoanSheet : nextState.LoanSheet
-                }));
+                })).ConfigureAwait(false);
             }
             catch (Exception error)
             {
                 _logger.LogError(error, "Unhandled exception when synchronizing students and equipment items from google sheet");
             }
+#pragma warning restore CA1031 // Do not catch general exception types
 
             _timer?.Change((int)_syncInterval.TotalMilliseconds, Timeout.Infinite);
         }
@@ -86,7 +89,21 @@ namespace Scani.Kiosk.Backends.GoogleSheet
 
         public void Dispose()
         {
-            _timer?.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_isDisposed) return;
+
+            if (disposing)
+            {
+                _stoppingCts?.Dispose();
+                _timer?.Dispose();
+            }
+
+            _isDisposed = true;
         }
     }
 }

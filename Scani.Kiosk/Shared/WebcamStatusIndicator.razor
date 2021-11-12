@@ -98,13 +98,26 @@
         ZXingScanner.ScancodeDetected += HandleScancodeDetectedAsync;
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            /* This component mounts and unmounts often (the indicator) so we need to re-attach the 
+             * video stream when it does remound.
+             */
+            await HandleMediaDeviceChangedAsync(ZXingScanner.ActiveMediaDevice);
+        }
+    }
+
     private async Task DisplayFlashScanResult()
     {
         _showHadScanResultFlash = true;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
         await Task.Delay(_statusFlashDuration);
         _showHadScanResultFlash = false;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleScancodeDetectedAsync(string scancode)
@@ -123,7 +136,7 @@
             await JsRuntime.InvokeVoidAsync("streamMediaDeviceIntoVideoElement", "webcam-preview", mediaDevice.DeviceId);
         }
 
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task DisableWebcamScanning()

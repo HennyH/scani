@@ -61,54 +61,52 @@ namespace Scani.Kiosk.Backends.GoogleSheet
 #pragma warning disable VSTHRD012 // Provide JoinableTaskFactory where allowed
         private readonly AsyncReaderWriterLock _stateLock = new AsyncReaderWriterLock();
 #pragma warning restore VSTHRD012 // Provide JoinableTaskFactory where allowed
-
+        private bool _isDisposed;
         public event Func<Task>? StateChanged;
 
-        public async Task<R> ReadStateAsync<R>(Func<GoogleSheetKioskState, Task<R>> action)
+        public async Task<T> ReadStateAsync<T>(Func<GoogleSheetKioskState, Task<T>> action)
         {
-            var readLock = await this._stateLock.ReadLockAsync();
-            try
-            {
-                return await action(_state);
-            }
-            finally
-            {
-                await readLock.ReleaseAsync();
-            }
+            ArgumentNullException.ThrowIfNull(action);
+            using var readLock = await this._stateLock.ReadLockAsync();
+            return await action(_state).ConfigureAwait(false);
         }
 
         public async Task ReadStateAsync(Func<GoogleSheetKioskState, Task> action)
         {
-            var readLock = await this._stateLock.ReadLockAsync();
-            try
-            {
-                await action(_state);
-            }
-            finally
-            {
-                await readLock.ReleaseAsync();
-            }
+            ArgumentNullException.ThrowIfNull(action);
+            using var readLock = await this._stateLock.ReadLockAsync();
+            await action(_state).ConfigureAwait(false);
         }
 
         public async Task ReduceStateAsync(Func<GoogleSheetKioskState, Task<GoogleSheetKioskState>> reducer)
         {
-            var writeLock = await this._stateLock.WriteLockAsync();
-            try
+            ArgumentNullException.ThrowIfNull(reducer);
+
             {
-                _state = await reducer(_state);
+                using var writeLock = await this._stateLock.WriteLockAsync();
+                _state = await reducer(_state).ConfigureAwait(false);
                 _state.LastModified = DateTime.Now;
             }
-            finally
-            {
-                await writeLock.ReleaseAsync();
-            }
 
-            await StateChanged.InvokeAllAsync();
+            await StateChanged.InvokeAllAsync().ConfigureAwait(false);
         }
 
         public void Dispose()
         {
-            _stateLock.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_isDisposed) return;
+
+            if (disposing)
+            {
+                _stateLock?.Dispose();
+            }
+
+            _isDisposed = true;
         }
     }
 }

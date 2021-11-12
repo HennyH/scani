@@ -2,6 +2,6 @@
 {
     public interface IHaveFlexFields
     {
-        public IDictionary<string, string?> FlexFields { get; set; }
+        public IDictionary<string, string?> FlexFields { get; }
     }
 }

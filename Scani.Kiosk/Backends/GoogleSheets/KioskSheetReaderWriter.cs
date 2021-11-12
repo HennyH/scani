@@ -25,7 +25,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
             this._sheetsAccessor = sheetsAccessor;
         }
 
-        private async Task<IList<IList<IList<object>>>> GetRowsAsync(ThrottledKioskSheetAccessor service, string sheetId, string[] sheetNames, int pageSize = 1000)
+        private static async Task<IList<IList<IList<object>>>> GetRowsAsync(ThrottledKioskSheetAccessor service, string sheetId, string[] sheetNames, int pageSize = 1000)
         {
             var results = new List<IList<IList<object>>>();
             foreach (var _ in sheetNames)
@@ -39,8 +39,8 @@ namespace Scani.Kiosk.Backends.GoogleSheet
                 {
                     var request = s.Spreadsheets.Values.BatchGet(sheetId);
                     request.Ranges = new Repeatable<string>(sheetNames.Select(n => $"{n}!A1:Z{i + pageSize}").ToList());
-                    return await request.ExecuteAsync();
-                });
+                    return await request.ExecuteAsync().ConfigureAwait(false);
+                }).ConfigureAwait(false);
 
                 for (var s = 0; s < sheetNames.Length; s++)
                 {
@@ -61,17 +61,13 @@ namespace Scani.Kiosk.Backends.GoogleSheet
 
         public async Task<GoogleSheetKioskState> ReadAsync()
         {
-            _logger.LogInformation("Entering read lock on thread {}", Thread.CurrentThread.ManagedThreadId);
-            var readLock = await this._sheetLock.ReadLockAsync();
+            _logger.LogInformation("Entering read lock on thread {}", Environment.CurrentManagedThreadId);
+
             IList<IList<IList<object>>> sheetCells;
-            try
+
             {
-                sheetCells = await GetRowsAsync(_sheetsAccessor, _sheetId, new[] { "Students", "Equipment", "Loans" });
-            }
-            finally
-            {
-                _logger.LogInformation("Exiting read lock on thread {}", Thread.CurrentThread.ManagedThreadId);
-                await readLock.ReleaseAsync();
+                using var readLock = await this._sheetLock.ReadLockAsync();
+                sheetCells = await GetRowsAsync(_sheetsAccessor, _sheetId, new[] { "Students", "Equipment", "Loans" }).ConfigureAwait(false);
             }
 
             var students = KioskCellsReader.ParseCells<StudentRow>(
@@ -108,11 +104,11 @@ namespace Scani.Kiosk.Backends.GoogleSheet
             var writeLock = await this._sheetLock.WriteLockAsync();
             try
             {
-                await _sheetsAccessor.AccessAsync(action);
+                await _sheetsAccessor.AccessAsync(action).ConfigureAwait(false);
             }
             finally
             {
-                await writeLock.ReleaseAsync();
+                await writeLock.ReleaseAsync().ConfigureAwait(false);
             }
         }
     }

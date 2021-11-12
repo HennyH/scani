@@ -1,6 +1,8 @@
 ﻿using Scani.Kiosk.Backends.GoogleSheets.Sheets.Models;
 using Scani.Kiosk.Helpers;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Contracts;
+using System.Globalization;
 using System.Text;
 
 namespace Scani.Kiosk.Data;
@@ -39,7 +41,7 @@ public class EquipmentCheckoutCart
             {
                 if (Takes.Any())
                 {
-                    sb.Append($"Checkout {Takes.Count()} items");
+                    sb.Append(CultureInfo.CurrentCulture, $"Checkout {Takes.Count()} items");
                     if (Returns.Any())
                     {
                         sb.Append(", ");
@@ -47,7 +49,7 @@ public class EquipmentCheckoutCart
                 }
                 if (Returns.Any())
                 {
-                    sb.Append($"Return {Returns.Count()} items");
+                    sb.Append(CultureInfo.CurrentCulture, $"Return {Returns.Count()} items");
                 }
             }
             return sb.ToString();
@@ -56,6 +58,8 @@ public class EquipmentCheckoutCart
 
     public bool TryGetCartItemTypeForEquipment(EquipmentRow equipment, [NotNullWhen(true)] out CartItemType? itemType)
     {
+        ArgumentNullException.ThrowIfNull(equipment);
+
         itemType = null;
 
         if (_scancodeToCartItem.TryGetValue(equipment.Scancode, out var cartItem))
@@ -70,6 +74,8 @@ public class EquipmentCheckoutCart
 
     public async Task ToggleSelfReturnAsync(EquipmentRow equipment)
     {
+        ArgumentNullException.ThrowIfNull(equipment);
+
         if (_scancodeToCartItem.ContainsKey(equipment.Scancode))
         {
             _scancodeToCartItem.Remove(equipment.Scancode);
@@ -79,11 +85,13 @@ public class EquipmentCheckoutCart
             _scancodeToCartItem.Add(equipment.Scancode, new CartItem(CartItemType.SelfReturn, equipment));
         }
 
-        await OnCartChanged.InvokeAllAsync(this);
+        await OnCartChanged.InvokeAllAsync(this).ConfigureAwait(false);
     }
 
     public async Task ToggleDelegatedReturnAsync(EquipmentRow equipment)
     {
+        ArgumentNullException.ThrowIfNull(equipment);
+
         if (_scancodeToCartItem.ContainsKey(equipment.Scancode))
         {
             _scancodeToCartItem.Remove(equipment.Scancode);
@@ -93,11 +101,13 @@ public class EquipmentCheckoutCart
             _scancodeToCartItem.Add(equipment.Scancode, new CartItem(CartItemType.DelegatedReturn, equipment));
         }
 
-        await OnCartChanged.InvokeAllAsync(this);
+        await OnCartChanged.InvokeAllAsync(this).ConfigureAwait(false);
     }
 
     public async Task ToggleTakeAsync(EquipmentRow equipment)
     {
+        ArgumentNullException.ThrowIfNull(equipment);
+
         if (_scancodeToCartItem.ContainsKey(equipment.Scancode))
         {
             _scancodeToCartItem.Remove(equipment.Scancode);
@@ -107,6 +117,6 @@ public class EquipmentCheckoutCart
             _scancodeToCartItem.Add(equipment.Scancode, new CartItem(CartItemType.Take, equipment));
         }
 
-        await OnCartChanged.InvokeAllAsync(this);
+        await OnCartChanged.InvokeAllAsync(this).ConfigureAwait(false);
     }
 }

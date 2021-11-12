@@ -6,6 +6,7 @@ namespace Scani.Kiosk.Extensions
     {
         public static TaskAwaiter<T> GetAwaiter<T>(this Lazy<Task<T>> asyncTask)
         {
+            ArgumentNullException.ThrowIfNull(asyncTask);
             return asyncTask.Value.GetAwaiter();
         }
     }

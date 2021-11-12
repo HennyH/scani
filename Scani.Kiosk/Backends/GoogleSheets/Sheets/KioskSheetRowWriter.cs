@@ -18,6 +18,9 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                 IEnumerable<T> rows)
             where T : ISheetRow
         {
+            ArgumentNullException.ThrowIfNull(sheetsAccessor);
+            ArgumentNullException.ThrowIfNull(rows);
+
             var columns = GetExpectedColumns<T>();
             var response = await sheetsAccessor.AccessAsync(async s =>
             {
@@ -35,8 +38,8 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                         })
                         .ToList()
                 }, sheetId);
-                return await request.ExecuteAsync();
-            });
+                return await request.ExecuteAsync().ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
             var results = new List<KioskSheetWriteResult<T>>();
             foreach (var row in rows)
@@ -50,11 +53,9 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                 }
                 else
                 {
-                    results.Add(new KioskSheetWriteResult<T>(row)
-                    {
-                        Ok = false,
-                        Errors = new List<KioskSheetWriteError> { new KioskSheetWriteError(0, sheetName, "Failed to update row") }
-                    });
+                    var result = new KioskSheetWriteResult<T>(row) { Ok = false };
+                    result.Errors.Add(new KioskSheetWriteError(0, sheetName, "Failed to update row"));
+                    results.Add(result);
                 }
             }
 

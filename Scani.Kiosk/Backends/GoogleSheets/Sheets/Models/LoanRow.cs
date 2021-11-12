@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Globalization;
 
 namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
 {
@@ -13,24 +14,26 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
 
         public LoanRow(string idText, string studentScancode, string equipmentScancode, string loanDateText, KioskSheetReadResult<LoanRow> loanSheet)
         {
+            ArgumentNullException.ThrowIfNull(loanSheet);
             this.IdText = idText;
             this.StudentScancode = studentScancode;
             this.EquipmentScancode = equipmentScancode;
             this.LoanDateText = loanDateText;
-            this.Range = loanSheet.DataRowNumberToRange(Interlocked.Increment(ref loanSheet.NextDataRowNumber) - 1);
+            this.Range = loanSheet.DataRowNumberToRange(loanSheet.GetNextRowNumber());
         }
 
         public LoanRow(string studentScancode, string equipmentScancode, string loanDateText, KioskSheetReadResult<LoanRow> loanSheet)
         {
+            ArgumentNullException.ThrowIfNull(loanSheet);
             this.IdText = Guid.NewGuid().ToString();
             this.StudentScancode = studentScancode;
             this.EquipmentScancode = equipmentScancode;
             this.LoanDateText = loanDateText;
-            this.Range = loanSheet.DataRowNumberToRange(Interlocked.Increment(ref loanSheet.NextDataRowNumber) - 1);
+            this.Range = loanSheet.DataRowNumberToRange(loanSheet.GetNextRowNumber());
         }
 
         public LoanRow(string studentScancode, string equipmentScancode, DateTime loanDate, KioskSheetReadResult<LoanRow> loanSheet)
-            : this(studentScancode, equipmentScancode, loanDate.ToString(), loanSheet)
+            : this(studentScancode, equipmentScancode, loanDate.ToString(CultureInfo.InvariantCulture), loanSheet)
         { }
 
         [Column("ID", Order = 1)]
@@ -55,12 +58,12 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
         {
             get
             {
-                return DateTime.Parse(LoanDateText);
+                return DateTime.Parse(LoanDateText, CultureInfo.InvariantCulture);
             }
 
             set
             {
-                LoanDateText = value.ToString();
+                LoanDateText = value.ToString(CultureInfo.InvariantCulture);
             }
         }
 
@@ -71,7 +74,7 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
         {
             get
             {
-                return ReturnedDateText == null ? null : DateTime.Parse(ReturnedDateText);
+                return ReturnedDateText == null ? null : DateTime.Parse(ReturnedDateText, CultureInfo.InvariantCulture);
             }
 
             set

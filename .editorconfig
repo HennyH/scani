@@ -1,0 +1,7 @@
+﻿[*.cs]
+
+# CA1848: Use the LoggerMessage delegates
+dotnet_diagnostic.CA1848.severity = none
+
+[*.{cs,vb}]
+dotnet_diagnostic.CA1003.severity=silent

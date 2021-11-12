@@ -24,15 +24,19 @@ namespace Scani.Kiosk.Helpers
 
         public virtual async Task AccessAsync(Func<T, Task> action, TimeSpan? interval = null)
         {
+            ArgumentNullException.ThrowIfNull(action);
+
             await AccessAsync(async (r) =>
             {
-                await action(r);
+                await action(r).ConfigureAwait(false);
                 return Task.CompletedTask;
-            }, interval);
+            }, interval).ConfigureAwait(false);
         }
 
-        public virtual async Task<R> AccessAsync<R>(Func<T, Task<R>> action, TimeSpan? interval = null)
+        public virtual async Task<TResult> AccessAsync<TResult>(Func<T, Task<TResult>> action, TimeSpan? interval = null)
         {
+            ArgumentNullException.ThrowIfNull(action);
+
             var intervalMilliseconds = (int)interval.GetValueOrDefault(TimeSpan.FromMilliseconds(200)).TotalMilliseconds;
 
             while (true)
@@ -50,12 +54,12 @@ namespace Scani.Kiosk.Helpers
                 {
                     var usages = Interlocked.Increment(ref _periodUsages);
                     _logger.LogInformation("Throttled accessor allow access resulting in period usage total of {}", usages);
-                    return await action(_resource);
+                    return await action(_resource).ConfigureAwait(false);
                 }
                 else
                 {
                     _logger.LogWarning("Throttled accessor period reached limit usage of {} every {}, duration of current usage period is {}", _limit, _limitPeriod, usagePeriodDuration);
-                    await Task.Delay(intervalMilliseconds);
+                    await Task.Delay(intervalMilliseconds).ConfigureAwait(false);
                 }
             }
         }

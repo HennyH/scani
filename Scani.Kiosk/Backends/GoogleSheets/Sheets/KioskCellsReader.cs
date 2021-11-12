@@ -13,14 +13,14 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
         public static KioskSheetReadResult<T> ParseCells<T>(ILogger logger, string sheetName, IList<IList<object>> cells, int numberOfHeaderRows, int dataHeaderRowNumber, (int RowNumber, int ColNumber)? firstFlexFieldCell = null)
             where T : ISheetRow
         {
+            ArgumentNullException.ThrowIfNull(cells);
+
             var expectedColumns = GetExpectedColumns<T>();
             var maxExpectedColumnNumber = expectedColumns.Max(ec => ec.ColumnNumber);
             var result = new KioskSheetReadResult<T>(
                 sheetName: sheetName,
-                dataRowNumberToRange: rowNumber => $"{sheetName}!A{rowNumber}:{GetExcelColumnName(maxExpectedColumnNumber)}{rowNumber}")
-            {
-                NextDataRowNumber = Math.Max(dataHeaderRowNumber + 1, cells.Count + 1)
-            };
+                dataRowNumberToRange: rowNumber => $"{sheetName}!A{rowNumber}:{GetExcelColumnName(maxExpectedColumnNumber)}{rowNumber}",
+                maximumRowNumber: Math.Max(dataHeaderRowNumber + 1, cells.Count));
 
             if (cells.Count < numberOfHeaderRows)
             {
@@ -172,7 +172,17 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                                 }
                             }
 
-                            itemWithFlexFields.FlexFields = flexFields;
+                            foreach (var (key, value) in flexFields)
+                            {
+                                if (itemWithFlexFields.FlexFields.ContainsKey(key))
+                                {
+                                    itemWithFlexFields.FlexFields[key] = value;
+                                }
+                                else
+                                {
+                                    itemWithFlexFields.FlexFields.Add(key, value);
+                                }
+                            }
                         }
 
                         if (item is IHaveScancode itemWithScancode)

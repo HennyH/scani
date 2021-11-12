@@ -33,12 +33,12 @@ public class ActiveUserService
     public async Task SetActiveUserAsync(StudentRow userInfo)
     {
         ActiveUserState = new ActiveUserState(userInfo);
-        await ActiveUserChanged.InvokeAllAsync(ActiveUserState);
+        await ActiveUserChanged.InvokeAllAsync(ActiveUserState).ConfigureAwait(false);
     }
 
     public async Task LogoutActiveUserAsync()
     {
         ActiveUserState = new ActiveUserState();
-        await ActiveUserChanged.InvokeAllAsync(ActiveUserState);
+        await ActiveUserChanged.InvokeAllAsync(ActiveUserState).ConfigureAwait(false);
     }
 }

@@ -26,14 +26,14 @@ namespace Scani.Kiosk.Backends.GoogleSheet
             this._appName = configuration.GetValue<string>("GoogleSheet:AppName");
             this._cancellationToken = cancellationToken;
 #pragma warning disable VSTHRD011 // Use AsyncLazy<T>
-            this._lazyThrottledAccessor = new Lazy<Task<ThrottledAccessor<SheetsService>>>(async () => new ThrottledAccessor<SheetsService>(logger, await CreateSheetsServiceAsync(), 100, TimeSpan.FromMinutes(1)));
+            this._lazyThrottledAccessor = new Lazy<Task<ThrottledAccessor<SheetsService>>>(async () => new ThrottledAccessor<SheetsService>(logger, await CreateSheetsServiceAsync().ConfigureAwait(false), 100, TimeSpan.FromMinutes(1)));
 #pragma warning restore VSTHRD011 // Use AsyncLazy<T>
         }
 
         private async Task<SheetsService> CreateSheetsServiceAsync()
         {
             using var stream = new FileStream(_credentialsFile, FileMode.Open, FileAccess.Read);
-            var credential = await GoogleCredential.FromStreamAsync(stream, _cancellationToken);
+            var credential = await GoogleCredential.FromStreamAsync(stream, _cancellationToken).ConfigureAwait(false);
             var scopedCredential = credential.CreateScoped(SHEET_SCOPES);
             return new SheetsService(new BaseClientService.Initializer
             {
@@ -44,12 +44,12 @@ namespace Scani.Kiosk.Backends.GoogleSheet
 
         public async Task AccessAsync(Func<SheetsService, Task> action, TimeSpan? interval = null)
         {
-            await (await _lazyThrottledAccessor).AccessAsync(action, interval);
+            await (await _lazyThrottledAccessor).AccessAsync(action, interval).ConfigureAwait(false);
         }
 
-        public async Task<R> AccessAsync<R>(Func<SheetsService, Task<R>> action, TimeSpan? interval = null)
+        public async Task<T> AccessAsync<T>(Func<SheetsService, Task<T>> action, TimeSpan? interval = null)
         {
-            return await (await _lazyThrottledAccessor).AccessAsync(action, interval);
+            return await (await _lazyThrottledAccessor).AccessAsync(action, interval).ConfigureAwait(false);
         }
     }
 }
