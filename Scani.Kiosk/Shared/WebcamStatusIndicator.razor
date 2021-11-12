@@ -77,7 +77,7 @@
             <p>Video scanning has been disabled, select a video device from the above dropdown list to enable video scanning.</p>
         }
         
-        <video id="webcam-preview" autoplay muted playsinline width="300" height="200" style="padding: 1em; @(ZXingScanner.ActiveMediaDevice == null ? "visability: hidden;" : "")"></video>   
+        <video id="webcam-preview" autoplay muted playsinline width="300" height="200" style="padding: 1em; @(ZXingScanner.ActiveMediaDevice == null ? "display: none;" : "")"></video>
     </Body>
     <Footer>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -89,30 +89,13 @@
     private bool _showHadScanResultFlash = false;
     private bool _showHadScanErrorFlash = false;
     private bool _isModalVisable = false;
-    private bool _hasHadFirstRender = false;
-    private MediaDeviceInfo? _lastShownMediaDevice;
     private readonly TimeSpan _statusFlashDuration = TimeSpan.FromMilliseconds(600);
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
-
+        ZXingScanner.MediaDeviceChanged += HandleMediaDeviceChangedAsync;
         ZXingScanner.ScancodeDetected += HandleScancodeDetectedAsync;
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        await base.OnAfterRenderAsync(firstRender);
-
-        if (firstRender)
-        {
-            _hasHadFirstRender = true;
-        }
-
-        if (_hasHadFirstRender)
-        {
-            await UpdateWebcamPreview();
-        }
     }
 
     private async Task DisplayFlashScanResult()
@@ -129,19 +112,18 @@
         await DisplayFlashScanResult();
     }
 
-    private async Task UpdateWebcamPreview()
+    private async Task HandleMediaDeviceChangedAsync(MediaDeviceInfo? mediaDevice)
     {
-        if (_hasHadFirstRender
-            && ZXingScanner.ActiveMediaDevice != null
-            && (_lastShownMediaDevice == null || _lastShownMediaDevice.DeviceId != ZXingScanner.ActiveMediaDevice.DeviceId))
+        if (mediaDevice == null)
         {
-            await JsRuntime.InvokeVoidAsync(
-                "StreamMediaDeviceIntoVideoElement",
-                "webcam-preview",
-                ZXingScanner.ActiveMediaDevice.DeviceId
-            );
-            _lastShownMediaDevice = ZXingScanner.ActiveMediaDevice;
+            await JsRuntime.InvokeVoidAsync("clearVideoStreams", "#webcam-preview", null);
         }
+        else
+        {
+            await JsRuntime.InvokeVoidAsync("streamMediaDeviceIntoVideoElement", "webcam-preview", mediaDevice.DeviceId);
+        }
+
+        StateHasChanged();
     }
 
     private async Task DisableWebcamScanning()
@@ -151,15 +133,12 @@
 
     private async Task EnableWebcamScanningDevice(MediaDeviceInfo device)
     {
-        if (ZXingScanner.ActiveMediaDevice == null || device.DeviceId != ZXingScanner.ActiveMediaDevice.DeviceId)
-        {
-            await ZXingScanner.EnableWebCamScanning(device);
-            await UpdateWebcamPreview();
-        }
+        await ZXingScanner.EnableWebCamScanning(device);
     }
 
     public void Dispose()
     {
+        ZXingScanner.MediaDeviceChanged -= HandleMediaDeviceChangedAsync;
         ZXingScanner.ScancodeDetected -= HandleScancodeDetectedAsync;
     }
 }

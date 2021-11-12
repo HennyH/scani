@@ -12,7 +12,7 @@
     [Parameter] public TimeSpan KeySequenceTimeout { get; set; } = TimeSpan.FromSeconds(1);
     public IReadOnlyList<MediaDeviceInfo>? MediaDevices { get; private set; }
     public MediaDeviceInfo? ActiveMediaDevice { get; private set; }
-    public MediaDeviceInfo? LastActiveMediaDevice { get; private set; }
+    public event Func<MediaDeviceInfo?, Task>? MediaDeviceChanged;
     public event Func<string, Task>? ScancodeDetected;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -52,22 +52,27 @@
 
     public async Task DisableWebCamScanning()
     {
+        await JsRuntime.InvokeVoidAsync("clearVideoStreams", $"#{VideoElementId}");
         await JsRuntime.InvokeVoidAsync("ZXingResetCodeReader");
         ActiveMediaDevice = null;
+        await MediaDeviceChanged.InvokeAllAsync(null);
     }
 
     public async Task EnableWebCamScanning(MediaDeviceInfo mediaDevice)
     {
-        await JsRuntime.InvokeVoidAsync(
-            "ZXingRegisterOnDecodeListener",
-            DotNetObjectReference.Create(this),
-            nameof(HandleScanResult),
-            nameof(HandleScanResult),
-            mediaDevice.DeviceId,
-            VideoElementId,
-            RescanDelay.TotalMilliseconds
-        );
-        ActiveMediaDevice = mediaDevice;
-        LastActiveMediaDevice = mediaDevice;
+        if (ActiveMediaDevice == null || ActiveMediaDevice.DeviceId != mediaDevice.DeviceId)
+        {
+            await JsRuntime.InvokeVoidAsync(
+                "ZXingRegisterOnDecodeListener",
+                DotNetObjectReference.Create(this),
+                nameof(HandleScanResult),
+                nameof(HandleScanResult),
+                mediaDevice.DeviceId,
+                VideoElementId,
+                RescanDelay.TotalMilliseconds
+            );
+            ActiveMediaDevice = mediaDevice;
+            await MediaDeviceChanged.InvokeAllAsync(mediaDevice);
+        }
     }
 }

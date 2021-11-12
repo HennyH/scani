@@ -8,6 +8,18 @@ let $codeReader = new Promise((resolve, reject) => {
     })
 });
 
+window.clearVideoStreams = (selector) => {
+    const videoElements = document.querySelectorAll(selector);
+    videoElements.forEach(videoElement => {
+        if (videoElement === null || videoElement === undefined || videoElement.srcObject === null || videoElement.srcObject === undefined) return;
+        const tracks = videoElement.srcObject.getTracks();
+
+        tracks.forEach(t => t.stop());
+
+        videoElement.srcObject = null;
+    });
+}
+
 window.ZXingListVideoInputDevices = async () => {
     const zx = await $codeReader;
     try {
@@ -17,8 +29,10 @@ window.ZXingListVideoInputDevices = async () => {
     }
 }
 
-window.ZXingResetCodeReader = async () => {
+window.ZXingResetCodeReader = async (videoElementId) => {
     const zx = await $codeReader;
+    clearVideoStreams(videoElementId);
+    zx.enable = false;
     zx.reset();
 }
 
@@ -27,6 +41,7 @@ window.ZXingRegisterOnDecodeListener = async (dotNetObjRef, onResultMethodName, 
     let codeToLastScannedTime = {};
 
     const zx = await $codeReader;
+    zx.enable = true;
     zx.decodeFromVideoDevice(deviceId, videoElementId, async (result, err) => {
         if (result) {
             const now = new Date();
@@ -44,26 +59,30 @@ window.ZXingRegisterOnDecodeListener = async (dotNetObjRef, onResultMethodName, 
 
 const videoElementIdToAlreadyPlaying = {};
 
-window.StreamMediaDeviceIntoVideoElement = async (elementId, deviceId) => {
+window.streamMediaDeviceIntoVideoElement = async (elementId, deviceId) => {
     try {
         const videoElement = document.getElementById(elementId);
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                deviceId: { exact: deviceId }
-            }
-        });
-        console.log("showing stream from", deviceId, stream, "on element", elementId);
-        videoElement.srcObject = null;
-        setTimeout(() => {
-            videoElement.srcObject = stream;
-            setTimeout(() => {
-                try {
-                    videoElement.play();
-                } catch (error) {
-
+        if (deviceId !== null) {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    deviceId: { exact: deviceId }
                 }
             });
-        });
+            console.log("showing stream from", deviceId, stream, "on element", elementId);
+            videoElement.srcObject = null;
+            setTimeout(() => {
+                videoElement.srcObject = stream;
+                setTimeout(() => {
+                    try {
+                        videoElement.play();
+                    } catch (error) {
+
+                    }
+                });
+            });
+        } else {
+            clearVideoStreams(elementId);
+        }
     } catch (err) {
         console.error(err);
     }
