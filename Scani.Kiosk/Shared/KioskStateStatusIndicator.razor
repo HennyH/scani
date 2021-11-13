@@ -9,12 +9,12 @@
     @onclick="HandleStatusIndicatorButtonClicked"
 >
     <img src="@(_ok ? "/assets/images/okay.svg" : "/assets/images/error.svg")" />
-    @if (_lastUpdated.HasValue)
+@*    @if (_lastUpdated.HasValue)
     {
         <span class="last-updated-time">
             Last Updated @(TimeZoneInfo.ConvertTime(_lastUpdated.Value, (ActiveUserState?.TimeZone ?? TimeZoneInfo.Local)).ToShortTimeString())
         </span>
-    }
+    }*@
 </button>
 
 <Modal
