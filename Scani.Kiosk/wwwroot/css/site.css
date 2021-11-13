@@ -6,7 +6,7 @@ html, body {
 }
 
 body {
-    height: calc(var(--vh) * 100);
+    height: var(--vh-100);
     margin: 0;
     width: 100%;
     display: grid;

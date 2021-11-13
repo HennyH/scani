@@ -1,8 +1,9 @@
 ﻿let keySequenceListener = null;
 
 window.addEventListener("load", () => {
-    const height = window.innerHeight * 0.01;
-    document.body.style.setProperty("--vh", `${height}px`);
+    const height = window.innerHeight;
+    document.body.style.setProperty("--vh-100", `${height}px`);
+    document.body.style.setProperty("--vh-1", `${height * 0.01}px`);
 })
 
 window.getTimeZoneOffset = () => {
