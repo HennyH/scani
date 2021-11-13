@@ -1,8 +1,9 @@
-﻿using System.Globalization;
+﻿using Scani.Kiosk.Helpers;
+using System.Globalization;
 
 namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
 {
-    [GoogleSheet("Loans", HeaderCount: 1)]
+    [GoogleSheet("Loans", HeaderCount:1)]
     public class LoanRow : ISheetRow
     {
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -31,7 +32,7 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
         }
 
         public LoanRow(string studentScancode, string equipmentScancode, DateTime loanDate, KioskSheetReadResult<LoanRow> loanSheet)
-            : this(studentScancode, equipmentScancode, loanDate.ToString(CultureInfo.DefaultThreadCurrentCulture), loanSheet)
+            : this(studentScancode, equipmentScancode, loanDate.ToIsoString(), loanSheet)
         { }
 
         [SheetColumn("ID", ColumnNumber: 1, IsRequired = true)]
@@ -52,12 +53,12 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
         {
             get
             {
-                return DateTime.Parse(LoanDateText, CultureInfo.DefaultThreadCurrentCulture);
+                return LoanDateText.FromIsoString();
             }
 
             set
             {
-                LoanDateText = value.ToString(CultureInfo.DefaultThreadCurrentCulture);
+                LoanDateText = value.ToIsoString();
             }
         }
 
@@ -68,12 +69,12 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
         {
             get
             {
-                return ReturnedDateText == null ? null : DateTime.Parse(ReturnedDateText, CultureInfo.DefaultThreadCurrentCulture);
+                return ReturnedDateText?.FromIsoString();
             }
 
             set
             {
-                ReturnedDateText = value.ToString();
+                ReturnedDateText = value?.ToIsoString();
             }
         }
 

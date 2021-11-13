@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Localization;
 using Scani.Kiosk.Backends.GoogleSheet;
 using Scani.Kiosk.Services;
+using System.Globalization;
 
 #pragma warning disable CA1812
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +21,16 @@ builder.Services.AddSingleton<SynchronizedKioskState>();
 builder.Services.AddHostedService<KioskSheetSynchronizer>();
 
 var app = builder.Build();
+var config = app.Services.GetRequiredService<IConfiguration>();
+
+app.UseRequestLocalization(options =>
+{
+    var localeIdentifier = config.GetValue<string?>("DefaultLocaleIdentifier");
+    if (!string.IsNullOrWhiteSpace(localeIdentifier))
+    {
+        options.DefaultRequestCulture = new RequestCulture(localeIdentifier);
+    }
+});
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
