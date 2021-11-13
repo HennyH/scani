@@ -1,10 +1,8 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Globalization;
+﻿using System.Globalization;
 
 namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
 {
+    [GoogleSheet("Loans", HeaderCount: 1)]
     public class LoanRow : ISheetRow
     {
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -33,48 +31,44 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
         }
 
         public LoanRow(string studentScancode, string equipmentScancode, DateTime loanDate, KioskSheetReadResult<LoanRow> loanSheet)
-            : this(studentScancode, equipmentScancode, loanDate.ToString(CultureInfo.InvariantCulture), loanSheet)
+            : this(studentScancode, equipmentScancode, loanDate.ToString(CultureInfo.DefaultThreadCurrentCulture), loanSheet)
         { }
 
-        [Column("ID", Order = 1)]
-        [Required]
+        [SheetColumn("ID", ColumnNumber: 1, IsRequired = true)]
         public string IdText { get; set; }
 
         public Guid Id => Guid.Parse(IdText);
 
-        [Column("Student Scancode", Order = 2)]
-        [Required]
+        [SheetColumn("Student Scancode", ColumnNumber: 2, IsRequired = true)]
         public string StudentScancode { get; set; }
 
-        [Column("Equipment Scancode", Order = 3)]
-        [Required]
+        [SheetColumn("Equipment Scancode", ColumnNumber: 3, IsRequired = true)]
         public string EquipmentScancode { get; set; }
 
-        [Column("Loaned Date", Order = 4)]
-        [Required]
+        [SheetColumn("Loaned Date", ColumnNumber: 4, IsRequired = true)]
         public string LoanDateText { get; set; }
 
         public DateTime LoanedDate
         {
             get
             {
-                return DateTime.Parse(LoanDateText, CultureInfo.InvariantCulture);
+                return DateTime.Parse(LoanDateText, CultureInfo.DefaultThreadCurrentCulture);
             }
 
             set
             {
-                LoanDateText = value.ToString(CultureInfo.InvariantCulture);
+                LoanDateText = value.ToString(CultureInfo.DefaultThreadCurrentCulture);
             }
         }
 
-        [Column("Returned Date", Order = 5)]
+        [SheetColumn("Returned Date", ColumnNumber: 5)]
         public string? ReturnedDateText { get; set; }
 
         public DateTime? ReturnedDate
         {
             get
             {
-                return ReturnedDateText == null ? null : DateTime.Parse(ReturnedDateText, CultureInfo.InvariantCulture);
+                return ReturnedDateText == null ? null : DateTime.Parse(ReturnedDateText, CultureInfo.DefaultThreadCurrentCulture);
             }
 
             set

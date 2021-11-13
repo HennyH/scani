@@ -13,7 +13,7 @@
         <h2><img src="/assets/images/shop.svg" />Available</h2>
         @if (_unloanedEquipment == null)
         {
-            <LoadingSpinner />
+            <LoadingSpinner Style="align-self: center;" />
         }
         else if (_unloanedEquipment.Any(IsEquipmentAvailableForTaking))
         {
@@ -82,7 +82,7 @@
         <h2><img src="/assets/images/stuff.svg" />Loaned</h2>
         @if (_myLoanedEquipment == null)
         {
-            <LoadingSpinner />
+            <LoadingSpinner Style="align-self: center;" />
         }
         else if (_myLoanedEquipment.Any(e => !IsEquipmentBeingReturned(e)))
         {

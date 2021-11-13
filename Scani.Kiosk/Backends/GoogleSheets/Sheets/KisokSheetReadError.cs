@@ -171,6 +171,25 @@
         }
     }
 
+    public class DataRowInvalidValue : KioskSheetReadError
+    {
+        public string ColumnName { get; init; }
+        public int RowNumber { get; init; }
+        public int ColumnNumber { get; init; }
+        public string Value { get; set; }
+
+        public DataRowInvalidValue(string sheetName, string columnName, string value, int rowNumber, int columnNumber)
+            : base(KioskSheetReadErrorType.DataRowExpectedValueMissing,
+                   sheetName,
+                   $"The sheet {sheetName} was not able to understand the value in column '{columnName}' on row {rowNumber} at column {columnNumber}, that value was {value}")
+        {
+            this.ColumnName = columnName;
+            this.RowNumber = rowNumber;
+            this.ColumnNumber = columnNumber;
+            this.Value = value;
+        }
+    }
+
     public class InvalidGeneratedScancode : KioskSheetReadError
     {
         public InvalidGeneratedScancode(string sheetName, string generatedScancode, int rowNumber)

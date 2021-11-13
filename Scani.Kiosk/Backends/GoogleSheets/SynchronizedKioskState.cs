@@ -8,17 +8,17 @@ namespace Scani.Kiosk.Backends.GoogleSheet
 {
     public class GoogleSheetKioskState
     {
-        public KioskSheetReadResult<StudentRow>? StudentsSheet { get; set; }
+        public KioskSheetReadResult<UserRow>? StudentsSheet { get; set; }
         public KioskSheetReadResult<EquipmentRow>? EquipmentSheet { get; set; }
         public KioskSheetReadResult<LoanRow>? LoanSheet { get; set; }
         public DateTime? LastModified { get; set; }
 
         public bool HasLoaded => StudentsSheet != null && EquipmentSheet != null && LoanSheet != null;
         public IEnumerable<EquipmentRow> Equipment => EquipmentSheet?.Rows?.ToList() ?? new List<EquipmentRow>();
-        public IEnumerable<StudentRow> Students => StudentsSheet
+        public IEnumerable<UserRow> Students => StudentsSheet
             ?.Rows
             ?.Where(s => s.IsActiveUser)
-            ?.ToList() ?? new List<StudentRow>();
+            ?.ToList() ?? new List<UserRow>();
         public IEnumerable<LoanRow> Loans => LoanSheet?.Rows?.ToList() ?? new List<LoanRow>();
         public IEnumerable<LoanRow> ActiveLoans => Loans.Where(l => !l.ReturnedDate.HasValue).ToList();
         public IEnumerable<EquipmentRow> UnloanedEquipment =>
@@ -44,7 +44,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
             Equipment
             ?.SingleOrDefault(e => e.Scancode == equipmentScancode);
 
-        public StudentRow? StudentWithScancode(string studentScancode) =>
+        public UserRow? StudentWithScancode(string studentScancode) =>
             Students
             ?.SingleOrDefault(s => s.Email == studentScancode || s.Scancode == studentScancode);
 

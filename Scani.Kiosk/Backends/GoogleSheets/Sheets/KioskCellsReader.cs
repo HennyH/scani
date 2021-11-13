@@ -1,6 +1,5 @@
 ﻿using Scani.Kiosk.Backends.GoogleSheets.Sheets.Models;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
@@ -10,26 +9,44 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
     {
         private const int MAX_FLEX_FIELDS = 20;
 
-        public static KioskSheetReadResult<T> ParseCells<T>(ILogger logger, string sheetName, IList<IList<object>> cells, int numberOfHeaderRows, int dataHeaderRowNumber, (int RowNumber, int ColNumber)? firstFlexFieldCell = null)
+        public static KioskSheetReadResult<T> ParseCells<T>(ILogger logger, IList<IList<object>> cells)
             where T : ISheetRow
         {
             ArgumentNullException.ThrowIfNull(cells);
+
+            if (!GoogleSheetAttribute.TryGetSheetName<T>(out var sheetName))
+            {
+                throw new ArgumentException($"The sheet name of the type {typeof(T)} could not be determined, did you add a [GoogleSheet] attribute?");
+            }
+
+            if (!GoogleSheetAttribute.TryGetNumberOfHeaderRows<T>(out var maybeNumberOfHeaderRows))
+            {
+                throw new ArgumentException($"The number of headers in the sheet type {typeof(T)} could not be determined, did you add a [GoogleSheet] attribute?");
+            }
+
+            var numberOfHeaderRows = maybeNumberOfHeaderRows.Value;
+            /* We assume that the last header is the one which contains the data row headers */
+            var dataHeaderRowNumber = numberOfHeaderRows;
 
             var expectedColumns = GetExpectedColumns<T>();
             var maxExpectedColumnNumber = expectedColumns.Max(ec => ec.ColumnNumber);
             var result = new KioskSheetReadResult<T>(
                 sheetName: sheetName,
                 dataRowNumberToRange: rowNumber => $"{sheetName}!A{rowNumber}:{GetExcelColumnName(maxExpectedColumnNumber)}{rowNumber}",
-                maximumRowNumber: Math.Max(dataHeaderRowNumber + 1, cells.Count));
+                maximumRowNumber: Math.Max(dataHeaderRowNumber, cells.Count));
 
             if (cells.Count < numberOfHeaderRows)
             {
                 result.Errors.Add(new MissingExpectedHeaderRows(sheetName, numberOfHeaderRows, cells.Count));
             }
 
-            if (firstFlexFieldCell.HasValue && (firstFlexFieldCell.Value.RowNumber > cells.Count || firstFlexFieldCell.Value.ColNumber < cells[firstFlexFieldCell.Value.RowNumber - 1].Count))
+            if (FlexFieldSheetColumnAttribute.TryGetFlexFlieldStartCellPosition<T>(out var maybeFirstFlexFieldCellPosition))
             {
-                result.Errors.Add(new MissingFlexFields(sheetName, firstFlexFieldCell.Value.RowNumber, firstFlexFieldCell.Value.ColNumber));
+                var (flexRowNumber, firstFlexColNumber) = maybeFirstFlexFieldCellPosition.Value;
+                if (flexRowNumber > cells.Count || firstFlexColNumber < cells[flexRowNumber - 1].Count)
+                {
+                    result.Errors.Add(new MissingFlexFields(sheetName, maybeFirstFlexFieldCellPosition.Value.RowNumber, maybeFirstFlexFieldCellPosition.Value.ColumnNumber));
+                }
             }
 
             /* After checking for missing flex fields and header rows, if we are missing the expected
@@ -41,9 +58,9 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
             }
 
             /* If we expected to find flex fields, and they aren't missing lets try read them out */
-            if (firstFlexFieldCell.HasValue && !result.Errors.Any(e => e is MissingFlexFields))
+            if (maybeFirstFlexFieldCellPosition.HasValue && !result.Errors.Any(e => e is MissingFlexFields))
             {
-                var (flexRowNumber, firstFlexColNumber) = firstFlexFieldCell.Value;
+                var (flexRowNumber, firstFlexColNumber) = maybeFirstFlexFieldCellPosition.Value;
                 var flexRow = cells[flexRowNumber - 1];
 
                 if (flexRow.Count > MAX_FLEX_FIELDS)
@@ -150,14 +167,26 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                                     result.Errors.Add(new DataRowExpectedValueMissing(sheetName, columnName, dataRowNumber, columnNumber));
                                     isValidRow = false;
                                 }
-                                property.SetValue(item, value ?? string.Empty);
+
+                                try
+                                {
+                                    property.SetValue(item, value ?? string.Empty);
+                                }
+#pragma warning disable CA1031 // Do not catch general exception types
+                                catch (Exception error)
+#pragma warning restore CA1031 // Do not catch general exception types
+                                {
+                                    logger.LogError(error, "An unhandled exception occured when trying to set the property {} to {} on row {} of sheet {}", property.Name, value, dataRowNumber, sheetName);
+                                    result.Errors.Add(new DataRowInvalidValue(sheetName, columnName, value ?? string.Empty, dataRowNumber, columnNumber));
+                                    isValidRow = false;
+                                }
                             }
                         }
 
-                        if (firstFlexFieldCell != null && result.FlexFieldNames.Any() && (item is IHaveFlexFields itemWithFlexFields))
+                        if (maybeFirstFlexFieldCellPosition != null && result.FlexFieldNames.Any() && (item is IHaveFlexFields itemWithFlexFields))
                         {
                             var flexFields = new Dictionary<string, string?>();
-                            var firstFlexColNumber = firstFlexFieldCell.Value.ColNumber;
+                            var firstFlexColNumber = maybeFirstFlexFieldCellPosition.Value.ColumnNumber;
                             for (int flexColumnOffset = 0; flexColumnOffset < result.FlexFieldNames.Count; flexColumnOffset++)
                             {
                                 var flexFieldName = result.FlexFieldNames[flexColumnOffset];
@@ -268,31 +297,28 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
 
         private static IEnumerable<(int ColumnNumber, string ColumnName, bool IsRequired, PropertyInfo Property)> GetExpectedColumns<T>()
         {
-            var columns = new List<(int Order, string ColumnName, bool IsRequired, PropertyInfo Property)>();
+            var columns = new List<(int ColumnNumber, string ColumnName, bool IsRequired, PropertyInfo Property)>();
             foreach (var property in typeof(T).GetProperties())
             {
                 var attributes = property.GetCustomAttributes(true);
-                var columnAttribute = attributes
-                    .Where(a => a is ColumnAttribute)
-                    .Cast<ColumnAttribute>()
+                var sheetColumnAttribute = attributes
+                    .Where(a => a is SheetColumnAttribute)
+                    .Cast<SheetColumnAttribute>()
                     .FirstOrDefault();
-                if (columnAttribute == null)
+                if (sheetColumnAttribute == null)
                 {
                     continue;
                 }
-                else if (string.IsNullOrWhiteSpace(columnAttribute.Name))
+                else if (string.IsNullOrWhiteSpace(sheetColumnAttribute.ColumnName))
                 {
                     throw new ArgumentException("Any [Column] declared on a sheet row must have the Name defined.", nameof(T));
                 }
-                var isRequired = attributes.Any(a => a is RequiredAttribute);
-                columns.Add((columnAttribute.Order, columnAttribute.Name!, isRequired, property));
+                columns.Add((sheetColumnAttribute.ColumnNumber, sheetColumnAttribute.ColumnName, sheetColumnAttribute.IsRequired, property));
             }
 
-            if (columns.Any(c => c.Order < 0)) throw new ArithmeticException($"{typeof(T)} had a [Column] with an Order < 0");
+            if (columns.Any(c => c.ColumnNumber < 0)) throw new ArithmeticException($"{typeof(T)} had a [SheetColumn] with an ColumnNumber < 0");
 
-            return columns
-                .OrderBy(c => c.Order)
-                .Select((c, i) => (i + 1, c.ColumnName, c.IsRequired, c.Property)).ToList();
+            return columns.OrderBy(c => c.ColumnNumber).ToList();
         }
     }
 }

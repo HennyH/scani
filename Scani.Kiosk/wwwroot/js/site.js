@@ -1,5 +1,10 @@
 ﻿let keySequenceListener = null;
 
+window.addEventListener("load", () => {
+    const height = window.innerHeight * 0.01;
+    document.body.style.setProperty("--vh", `${height}px`);
+})
+
 let $codeReader = new Promise((resolve, reject) => {
     window.addEventListener('load', function () {
         const zx = new ZXing.BrowserMultiFormatReader();

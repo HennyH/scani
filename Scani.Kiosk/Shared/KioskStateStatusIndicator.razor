@@ -2,7 +2,11 @@
 @inject IJSRuntime JsRuntime
 @inject SynchronizedKioskState KioskState
 
-<button type="button" class="btn btn-dark kiosk-state-indicator" @onclick="_ => _isModalVisable = true">
+<button
+    type="button"
+    class="btn btn-dark kiosk-state-indicator"
+    @onclick="HandleStatusIndicatorButtonClicked"
+>
     <img src="@(_ok ? "/assets/images/okay.svg" : "/assets/images/error.svg")" />
     @if (_lastUpdated.HasValue)
     {
@@ -64,6 +68,7 @@
 </Modal>
 
 @code {
+    [CascadingParameter] public ActiveUserState ActiveUserState { get; set; } = null!;
     private List<KioskSheetReadError> _loanErrors = new List<KioskSheetReadError>();
     private List<KioskSheetReadError> _studentErrors = new List<KioskSheetReadError>();
     private List<KioskSheetReadError> _equipmentErrors = new List<KioskSheetReadError>();
@@ -94,6 +99,11 @@
             _lastUpdated = state.LastModified;
             await InvokeAsync(StateHasChanged);
         });
+    }
+
+    private void HandleStatusIndicatorButtonClicked()
+    {
+        _isModalVisable = true;
     }
 
     public void Dispose()

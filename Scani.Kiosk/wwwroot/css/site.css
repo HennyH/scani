@@ -2,10 +2,11 @@
 
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --vh: 100vh;
 }
 
 body {
-    height: 100vh;
+    height: calc(var(--vh) * 100);
     margin: 0;
     width: 100%;
     display: grid;

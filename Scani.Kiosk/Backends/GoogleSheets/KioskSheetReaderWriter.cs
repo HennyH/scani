@@ -63,33 +63,22 @@ namespace Scani.Kiosk.Backends.GoogleSheet
         {
             _logger.LogInformation("Entering read lock on thread {}", Environment.CurrentManagedThreadId);
 
+            var sheetNames = new string[]
+            {
+                GoogleSheetAttribute.GetSheetName<UserRow>(),
+                GoogleSheetAttribute.GetSheetName<EquipmentRow>(),
+                GoogleSheetAttribute.GetSheetName<LoanRow>(),
+            };
             IList<IList<IList<object>>> sheetCells;
 
             {
                 using var readLock = await this._sheetLock.ReadLockAsync();
-                sheetCells = await GetRowsAsync(_sheetsAccessor, _sheetId, new[] { "Students", "Equipment", "Loans" }).ConfigureAwait(false);
+                sheetCells = await GetRowsAsync(_sheetsAccessor, _sheetId, sheetNames).ConfigureAwait(false);
             }
 
-            var students = KioskCellsReader.ParseCells<StudentRow>(
-                _logger,
-                "Students",
-                sheetCells[0],
-                2,
-                2,
-                (2, 7));
-            var equipment = KioskCellsReader.ParseCells<EquipmentRow>(
-                _logger,
-                "Equipment",
-                sheetCells[1],
-                2,
-                2,
-                (2, 4));
-            var loans = KioskCellsReader.ParseCells<LoanRow>(
-                _logger,
-                "Loans",
-                sheetCells[2],
-                1,
-                1);
+            var students = KioskCellsReader.ParseCells<UserRow>(_logger, sheetCells[0]);
+            var equipment = KioskCellsReader.ParseCells<EquipmentRow>(_logger, sheetCells[1]);
+            var loans = KioskCellsReader.ParseCells<LoanRow>(_logger, sheetCells[2]);
 
             return new GoogleSheetKioskState
             {

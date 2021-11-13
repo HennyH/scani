@@ -1,6 +1,7 @@
-﻿<div class="lds-spinner" style="height: @(Height)px; width: @(Width)px;"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+﻿<div class="lds-spinner" style="height: @(Height)px; width: @(Width)px; @(Style)"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
 
 @code {
     [Parameter] public int Height { get; set; } = 80;
     [Parameter] public int Width { get; set; } = 80;
+    [Parameter] public string? Style { get; set; }
 }
