@@ -2,7 +2,6 @@
 using Scani.Kiosk.Backends.GoogleSheets.Sheets;
 using Scani.Kiosk.Backends.GoogleSheets.Sheets.Models;
 using Scani.Kiosk.Helpers;
-using System.Collections.Concurrent;
 
 namespace Scani.Kiosk.Backends.GoogleSheet
 {
@@ -85,7 +84,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
             {
                 using var writeLock = await this._stateLock.WriteLockAsync();
                 _state = await reducer(_state).ConfigureAwait(false);
-                _state.LastModified = DateTime.Now;
+                _state.LastModified = DateTime.UtcNow;
             }
 
             await StateChanged.InvokeAllAsync().ConfigureAwait(false);

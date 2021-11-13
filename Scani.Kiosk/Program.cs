@@ -19,6 +19,7 @@ builder.Services.AddSingleton<ThrottledKioskSheetAccessor>();
 builder.Services.AddSingleton<KioskSheetReaderWriter>();
 builder.Services.AddSingleton<SynchronizedKioskState>();
 builder.Services.AddHostedService<KioskSheetSynchronizer>();
+builder.Services.AddLocalization();
 
 var app = builder.Build();
 var config = app.Services.GetRequiredService<IConfiguration>();
