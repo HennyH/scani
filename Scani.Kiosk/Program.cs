@@ -19,19 +19,11 @@ builder.Services.AddSingleton<ThrottledKioskSheetAccessor>();
 builder.Services.AddSingleton<KioskSheetReaderWriter>();
 builder.Services.AddSingleton<SynchronizedKioskState>();
 builder.Services.AddHostedService<KioskSheetSynchronizer>();
-builder.Services.AddLocalization();
 
 var app = builder.Build();
 var config = app.Services.GetRequiredService<IConfiguration>();
 
-app.UseRequestLocalization(options =>
-{
-    var localeIdentifier = config.GetValue<string?>("DefaultLocaleIdentifier");
-    if (!string.IsNullOrWhiteSpace(localeIdentifier))
-    {
-        options.DefaultRequestCulture = new RequestCulture(localeIdentifier);
-    }
-});
+app.UseRequestLocalization(config.GetValue<string>("LocaleIdentifier"));
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

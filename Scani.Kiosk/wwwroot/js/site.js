@@ -5,6 +5,10 @@ window.addEventListener("load", () => {
     document.body.style.setProperty("--vh", `${height}px`);
 })
 
+window.getTimeZoneOffset = () => {
+    return new Date().getTimezoneOffset();
+};
+
 let $codeReader = new Promise((resolve, reject) => {
     window.addEventListener('load', function () {
         const zx = new ZXing.BrowserMultiFormatReader();

@@ -11,7 +11,10 @@
     <img src="@(_ok ? "/assets/images/okay.svg" : "/assets/images/error.svg")" />
     @if (_lastUpdated.HasValue)
     {
-        <span class="last-updated-time">Last Updated @(_lastUpdated.Value.ToShortTimeString())</span>
+        <span class="last-updated-time">
+            Last Updated
+            <LocalTime Time="_lastUpdated" Format="@(CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern)" />
+        </span>
     }
 </button>
 

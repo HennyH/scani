@@ -5,11 +5,12 @@ namespace Scani.Kiosk.Services;
 
 public record ActiveUserState
 {
-    public ActiveUserState(UserRow userInfo)
+    public ActiveUserState(UserRow userInfo, TimeZoneInfo timeZone)
     {
         ArgumentNullException.ThrowIfNull(userInfo);
-        IsAdmin = userInfo.IsAdmin;
-        User = userInfo;
+        this.IsAdmin = userInfo.IsAdmin;
+        this.User = userInfo;
+        this.TimeZone = timeZone;
     }
 
     public ActiveUserState()
@@ -21,16 +22,24 @@ public record ActiveUserState
     public bool HasActiveUser => User != null;
     public bool IsAdmin { get; }
     public UserRow? User { get; }
+    public TimeZoneInfo TimeZone { get; init; } = TimeZoneInfo.Local;
 }
 
 public class ActiveUserService
 {
-    public ActiveUserState ActiveUserState { get; private set; } = new ActiveUserState();
+    public ActiveUserState ActiveUserState { get; private set; }
     public event Func<ActiveUserState, Task>? ActiveUserChanged;
+    private readonly TimeZoneInfo _userTimeZone;
+
+    public ActiveUserService(IConfiguration configuration)
+    {
+        _userTimeZone = TimeZoneInfo.FindSystemTimeZoneById(configuration.GetValue<string>("TimeZoneIdentifier"));
+        ActiveUserState = new ActiveUserState { TimeZone = _userTimeZone };
+    }
 
     public async Task SetActiveUserAsync(UserRow userInfo)
     {
-        ActiveUserState = new ActiveUserState(userInfo);
+        ActiveUserState = new ActiveUserState(userInfo, _userTimeZone);
         await ActiveUserChanged.InvokeAllAsync(ActiveUserState).ConfigureAwait(false);
     }
 

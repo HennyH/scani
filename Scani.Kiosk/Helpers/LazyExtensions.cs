@@ -9,5 +9,11 @@ namespace Scani.Kiosk.Extensions
             ArgumentNullException.ThrowIfNull(asyncTask);
             return asyncTask.Value.GetAwaiter();
         }
+
+        public static ValueTaskAwaiter<T> GetAwaiter<T>(this Lazy<ValueTask<T>> asyncValueTask)
+        {
+            ArgumentNullException.ThrowIfNull(asyncValueTask);
+            return asyncValueTask.Value.GetAwaiter();
+        }
     }
 }
