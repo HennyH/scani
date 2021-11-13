@@ -84,7 +84,7 @@ namespace Scani.Kiosk.Backends.GoogleSheet
             {
                 using var writeLock = await this._stateLock.WriteLockAsync();
                 _state = await reducer(_state).ConfigureAwait(false);
-                _state.LastModified = DateTime.UtcNow;
+                _state.LastModified = DateTime.Now;
             }
 
             await StateChanged.InvokeAllAsync().ConfigureAwait(false);

@@ -1,6 +1,7 @@
 ﻿using Scani.Kiosk.Backends.GoogleSheets.Sheets.Models;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
@@ -28,7 +29,7 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
             /* We assume that the last header is the one which contains the data row headers */
             var dataHeaderRowNumber = numberOfHeaderRows;
 
-            var expectedColumns = GetExpectedColumns<T>();
+            var expectedColumns = SheetColumnAttribute.GetExpectedColumns<T>();
             var maxExpectedColumnNumber = expectedColumns.Max(ec => ec.ColumnNumber);
             var result = new KioskSheetReadResult<T>(
                 sheetName: sheetName,
@@ -155,29 +156,33 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                             {
                                 if (isRequired)
                                 {
+                                    logger.LogError("Missing {} in row {}", columnName, dataRow);
                                     result.Errors.Add(new DataRowExpectedValueMissing(sheetName, columnName, dataRowNumber, columnNumber));
                                     isValidRow = false;
                                 }
                             }
                             else
                             {
-                                var value = dataRow[columnNumber - 1] as string;
-                                if (string.IsNullOrWhiteSpace(value) && isRequired)
+                                var value = dataRow[columnNumber - 1];
+                                if (value != null && (value is not string str || !string.IsNullOrWhiteSpace(str)))
                                 {
-                                    result.Errors.Add(new DataRowExpectedValueMissing(sheetName, columnName, dataRowNumber, columnNumber));
-                                    isValidRow = false;
-                                }
-
-                                try
-                                {
-                                    property.SetValue(item, value ?? string.Empty);
-                                }
+                                    try
+                                    {
+                                        property.SetValue(item, value);
+                                    }
 #pragma warning disable CA1031 // Do not catch general exception types
-                                catch (Exception error)
+                                    catch (Exception error)
 #pragma warning restore CA1031 // Do not catch general exception types
+                                    {
+                                        logger.LogError(error, "An unhandled exception occured when trying to set the property {} to {} on row {} of sheet {}", property.Name, value, dataRowNumber, sheetName);
+                                        result.Errors.Add(new DataRowInvalidValue(sheetName, columnName, value.ToString() ?? string.Empty, dataRowNumber, columnNumber));
+                                        isValidRow = false;
+                                    }
+                                }
+                                else if (isRequired)
                                 {
-                                    logger.LogError(error, "An unhandled exception occured when trying to set the property {} to {} on row {} of sheet {}", property.Name, value, dataRowNumber, sheetName);
-                                    result.Errors.Add(new DataRowInvalidValue(sheetName, columnName, value ?? string.Empty, dataRowNumber, columnNumber));
+                                    logger.LogError("Missing {} in row {} (value '{}' is null or whitespace) in column {}. Expected columns: {}", columnName, JsonSerializer.Serialize(dataRow), value, columnNumber, expectedColumns);
+                                    result.Errors.Add(new DataRowExpectedValueMissing(sheetName, columnName, dataRowNumber, columnNumber));
                                     isValidRow = false;
                                 }
                             }
@@ -293,32 +298,6 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
             }
 
             return columnName;
-        }
-
-        private static IEnumerable<(int ColumnNumber, string ColumnName, bool IsRequired, PropertyInfo Property)> GetExpectedColumns<T>()
-        {
-            var columns = new List<(int ColumnNumber, string ColumnName, bool IsRequired, PropertyInfo Property)>();
-            foreach (var property in typeof(T).GetProperties())
-            {
-                var attributes = property.GetCustomAttributes(true);
-                var sheetColumnAttribute = attributes
-                    .Where(a => a is SheetColumnAttribute)
-                    .Cast<SheetColumnAttribute>()
-                    .FirstOrDefault();
-                if (sheetColumnAttribute == null)
-                {
-                    continue;
-                }
-                else if (string.IsNullOrWhiteSpace(sheetColumnAttribute.ColumnName))
-                {
-                    throw new ArgumentException("Any [Column] declared on a sheet row must have the Name defined.", nameof(T));
-                }
-                columns.Add((sheetColumnAttribute.ColumnNumber, sheetColumnAttribute.ColumnName, sheetColumnAttribute.IsRequired, property));
-            }
-
-            if (columns.Any(c => c.ColumnNumber < 0)) throw new ArithmeticException($"{typeof(T)} had a [SheetColumn] with an ColumnNumber < 0");
-
-            return columns.OrderBy(c => c.ColumnNumber).ToList();
         }
     }
 }

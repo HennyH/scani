@@ -12,8 +12,7 @@
     @if (_lastUpdated.HasValue)
     {
         <span class="last-updated-time">
-            Last Updated
-            <LocalTime Time="_lastUpdated" Format="@(CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern)" />
+            Last Updated @(TimeZoneInfo.ConvertTime(_lastUpdated.Value, (ActiveUserState?.TimeZone ?? TimeZoneInfo.Local)).ToShortTimeString())
         </span>
     }
 </button>
@@ -87,7 +86,7 @@
             _loanErrors = state.LoanSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
             _studentErrors = state.StudentsSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
             _equipmentErrors = state.EquipmentSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
-            _lastUpdated = state.LastModified?.ToLocalTime();
+            _lastUpdated = state.LastModified;
             return Task.CompletedTask;
         });
         KioskState.StateChanged += HandleKioskStateChanged;
@@ -100,7 +99,7 @@
             _loanErrors = state.LoanSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
             _studentErrors = state.StudentsSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
             _equipmentErrors = state.EquipmentSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
-            _lastUpdated = state.LastModified?.ToLocalTime();
+            _lastUpdated = state.LastModified;
             await InvokeAsync(StateHasChanged);
         });
     }

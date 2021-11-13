@@ -21,7 +21,7 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
             ArgumentNullException.ThrowIfNull(sheetsAccessor);
             ArgumentNullException.ThrowIfNull(rows);
 
-            var columns = GetExpectedColumns<T>();
+            var columns = SheetColumnAttribute.GetExpectedColumns<T>();
             var response = await sheetsAccessor.AccessAsync(async s =>
             {
                 var request = s.Spreadsheets.Values.BatchUpdate(new BatchUpdateValuesRequest
@@ -33,7 +33,7 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                             Range = row.Range,
                             Values = new List<IList<object>>
                             {
-                                new List<object>(columns.OrderBy(c => c.Column).Select(c => c.Property.GetValue(row) ?? string.Empty))
+                                new List<object>(columns.OrderBy(c => c.ColumnNumber).Select(c => c.Property.GetValue(row) ?? string.Empty))
                             }
                         })
                         .ToList()
@@ -80,30 +80,6 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
             }
 
             return columnName;
-        }
-
-        private static IEnumerable<(int Column, string ColumnName, bool IsRequired, PropertyInfo Property)> GetExpectedColumns<T>()
-        {
-            var results = new List<(int Column, string ColumnName, bool IsRequired, PropertyInfo Property)>();
-            foreach (var property in typeof(T).GetProperties())
-            {
-                var attributes = property.GetCustomAttributes(true);
-                var columnAttribute = attributes
-                    .Where(a => a is ColumnAttribute)
-                    .Cast<ColumnAttribute>()
-                    .FirstOrDefault();
-                if (columnAttribute == null)
-                {
-                    continue;
-                }
-                else if (string.IsNullOrWhiteSpace(columnAttribute.Name))
-                {
-                    throw new ArgumentException("Any [Column] declared on a sheet row must have the Name defined.", nameof(T));
-                }
-                var isRequired = attributes.Any(a => a is RequiredAttribute);
-                results.Add((columnAttribute.Order, columnAttribute.Name!, isRequired, property));
-            }
-            return results;
         }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using Scani.Kiosk.Helpers;
-using System.Globalization;
 
 namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
 {
@@ -11,29 +10,15 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         { }
 
-        public LoanRow(string idText, string studentScancode, string equipmentScancode, string loanDateText, KioskSheetReadResult<LoanRow> loanSheet)
-        {
-            ArgumentNullException.ThrowIfNull(loanSheet);
-            this.IdText = idText;
-            this.StudentScancode = studentScancode;
-            this.EquipmentScancode = equipmentScancode;
-            this.LoanDateText = loanDateText;
-            this.Range = loanSheet.DataRowNumberToRange(loanSheet.GetNextRowNumber());
-        }
-
-        public LoanRow(string studentScancode, string equipmentScancode, string loanDateText, KioskSheetReadResult<LoanRow> loanSheet)
+        public LoanRow(string studentScancode, string equipmentScancode, DateTime loanDate, KioskSheetReadResult<LoanRow> loanSheet)
         {
             ArgumentNullException.ThrowIfNull(loanSheet);
             this.IdText = Guid.NewGuid().ToString();
             this.StudentScancode = studentScancode;
             this.EquipmentScancode = equipmentScancode;
-            this.LoanDateText = loanDateText;
+            this.LoanedDate = loanDate;
             this.Range = loanSheet.DataRowNumberToRange(loanSheet.GetNextRowNumber());
         }
-
-        public LoanRow(string studentScancode, string equipmentScancode, DateTime loanDate, KioskSheetReadResult<LoanRow> loanSheet)
-            : this(studentScancode, equipmentScancode, loanDate.ToIsoString(), loanSheet)
-        { }
 
         [SheetColumn("ID", ColumnNumber: 1, IsRequired = true)]
         public string IdText { get; set; }
@@ -47,36 +32,10 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
         public string EquipmentScancode { get; set; }
 
         [SheetColumn("Loaned Date", ColumnNumber: 4, IsRequired = true)]
-        public string LoanDateText { get; set; }
-
-        public DateTime LoanedDate
-        {
-            get
-            {
-                return LoanDateText.FromIsoString();
-            }
-
-            set
-            {
-                LoanDateText = value.ToIsoString();
-            }
-        }
+        public DateTime LoanedDate { get; set; }
 
         [SheetColumn("Returned Date", ColumnNumber: 5)]
-        public string? ReturnedDateText { get; set; }
-
-        public DateTime? ReturnedDate
-        {
-            get
-            {
-                return ReturnedDateText?.FromIsoString();
-            }
-
-            set
-            {
-                ReturnedDateText = value?.ToIsoString();
-            }
-        }
+        public DateTime? ReturnedDate { get; set; }
 
         public string Range { get; set; }
     }
