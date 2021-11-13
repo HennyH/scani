@@ -5,6 +5,8 @@ using Scani.Kiosk.Services;
 var builder = WebApplication.CreateBuilder(args);
 #pragma warning restore CA1812
 
+builder.Configuration.AddEnvironmentVariables();
+
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
