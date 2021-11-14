@@ -21,8 +21,16 @@
 
         if (firstRender)
         {
-            MediaDevices = await JsRuntime.InvokeAsync<List<MediaDeviceInfo>>("ZXingListVideoInputDevices");
-            if (MediaDevices.Any())
+            try
+            {
+                MediaDevices = await JsRuntime.InvokeAsync<List<MediaDeviceInfo>>("ZXingListVideoInputDevices");
+            }
+            catch (JSException error)
+            {
+                Logger.LogError(error, "Error retrieving a list of media devices");
+            }
+
+            if (MediaDevices?.Any() == true)
             {
                 await EnableWebCamScanning(MediaDevices[0]);
                 await InvokeAsync(StateHasChanged);

@@ -9,7 +9,7 @@
           <span class="visually-hidden">Scaned!</span>
         </div>
     }
-    else if (_showHadScanErrorFlash)
+    else if (_showHadScanErrorFlash || ZXingScanner.MediaDevices == null)
     {
         <div class="spinner-grow text-danger" role="status" style="position: absolute; left: calc(50% - 0.5 * 2rem); top: calc(50% - 0.5 * 2rem);">
           <span class="visually-hidden">Errored!</span>
