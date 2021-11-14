@@ -32,7 +32,7 @@
 
 #kiosk-screen > main {
     margin-top: 0.5em;
-    overflow-y: auto;
+    overflow-y: scroll;
 }
 
 .name {
