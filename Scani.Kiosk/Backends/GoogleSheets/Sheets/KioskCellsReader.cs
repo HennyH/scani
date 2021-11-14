@@ -140,6 +140,12 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                     bool isValidRow = true;
                     var dataRow = cells[dataRowNumber - 1];
 
+                    if (dataRow.Count == 0 || dataRow.All(v => v == null || (v is string str && string.IsNullOrWhiteSpace(str))))
+                    {
+                        logger.LogWarning("Skipping empty data row {} of spreadsheet {}", dataRowNumber, sheetName);
+                        continue;
+                    }
+
                     if (dataRow.Count < expectedColumns.Where(c => c.IsRequired).Count())
                     {
                         result.Errors.Add(new DataRowMissingValues(sheetName, dataRowNumber, maxExpectedColumnNumber, dataRow.Count));
