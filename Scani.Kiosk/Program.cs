@@ -6,7 +6,8 @@ using Scani.Kiosk.Services;
 var builder = WebApplication.CreateBuilder(args);
 #pragma warning restore CA1812
 
-var isHeroku = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DYNO"));
+// This is set from /profile/aspnetcore-defaults.sh in the dotnetcore-buildpack.
+var isHeroku = Environment.GetEnvironmentVariable("IS_HEROKU")?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
 
 builder.Configuration.AddEnvironmentVariables();
 
