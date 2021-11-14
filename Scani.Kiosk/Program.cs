@@ -1,11 +1,12 @@
-using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Scani.Kiosk.Backends.GoogleSheet;
 using Scani.Kiosk.Services;
-using System.Globalization;
 
 #pragma warning disable CA1812
 var builder = WebApplication.CreateBuilder(args);
 #pragma warning restore CA1812
+
+var isHeroku = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DYNO"));
 
 builder.Configuration.AddEnvironmentVariables();
 
@@ -20,6 +21,19 @@ builder.Services.AddSingleton<KioskSheetReaderWriter>();
 builder.Services.AddSingleton<SynchronizedKioskState>();
 builder.Services.AddHostedService<KioskSheetSynchronizer>();
 
+if (isHeroku)
+{
+    builder.Services.AddHttpsRedirection(options =>
+    {
+        options.HttpsPort = 443;
+    });
+
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    });
+}
+
 var app = builder.Build();
 var config = app.Services.GetRequiredService<IConfiguration>();
 
@@ -28,17 +42,16 @@ app.UseRequestLocalization(config.GetValue<string>("LocaleIdentifier"));
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
+    app.UseForwardedHeaders();
+    app.UseHttpsRedirection();
     app.UseExceptionHandler("/Error");
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
-
 app.UseStaticFiles();
 
 app.UseRouting();
-
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
