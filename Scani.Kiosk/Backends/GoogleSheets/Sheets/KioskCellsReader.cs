@@ -225,7 +225,7 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                             }
                         }
 
-                        if (item is IHaveScancode itemWithScancode)
+                        if (item is IHaveScancodes itemWithScancode)
                         {
                             var generatedScancode = itemWithScancode.GeneratedScancode;
                             var customScancode = itemWithScancode.CustomScancode;
@@ -270,7 +270,7 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
 
                             if (!string.IsNullOrWhiteSpace(customScancode))
                             {
-                                scancodes.Add(itemWithScancode.Scancode);
+                                scancodes.Add(customScancode);
                             }
                         }
 

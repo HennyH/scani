@@ -62,10 +62,13 @@ public class EquipmentCheckoutCart
 
         itemType = null;
 
-        if (_scancodeToCartItem.TryGetValue(equipment.Scancode, out var cartItem))
+        foreach (var scancode in equipment.Scancodes)
         {
-            itemType = cartItem.ItemType;
-            return true;
+            if (_scancodeToCartItem.TryGetValue(scancode, out var cartItem))
+            {
+                itemType = cartItem.ItemType;
+                return true;
+            }
         }
 
         return false;
@@ -76,13 +79,18 @@ public class EquipmentCheckoutCart
     {
         ArgumentNullException.ThrowIfNull(equipment);
 
-        if (_scancodeToCartItem.ContainsKey(equipment.Scancode))
+        foreach (var scancode in equipment.Scancodes)
         {
-            _scancodeToCartItem.Remove(equipment.Scancode);
-        }
-        else
-        {
-            _scancodeToCartItem.Add(equipment.Scancode, new CartItem(CartItemType.SelfReturn, equipment));
+            if (_scancodeToCartItem.ContainsKey(scancode))
+            {
+                _scancodeToCartItem.Remove(scancode);
+                break;
+            }
+            else
+            {
+                _scancodeToCartItem.Add(scancode, new CartItem(CartItemType.SelfReturn, equipment));
+                break;
+            }
         }
 
         await OnCartChanged.InvokeAllAsync(this).ConfigureAwait(false);
@@ -92,13 +100,18 @@ public class EquipmentCheckoutCart
     {
         ArgumentNullException.ThrowIfNull(equipment);
 
-        if (_scancodeToCartItem.ContainsKey(equipment.Scancode))
+        foreach (var scancode in equipment.Scancodes)
         {
-            _scancodeToCartItem.Remove(equipment.Scancode);
-        }
-        else
-        {
-            _scancodeToCartItem.Add(equipment.Scancode, new CartItem(CartItemType.DelegatedReturn, equipment));
+            if (_scancodeToCartItem.ContainsKey(scancode))
+            {
+                _scancodeToCartItem.Remove(scancode);
+                break;
+            }
+            else
+            {
+                _scancodeToCartItem.Add(scancode, new CartItem(CartItemType.DelegatedReturn, equipment));
+                break;
+            }
         }
 
         await OnCartChanged.InvokeAllAsync(this).ConfigureAwait(false);
@@ -108,13 +121,18 @@ public class EquipmentCheckoutCart
     {
         ArgumentNullException.ThrowIfNull(equipment);
 
-        if (_scancodeToCartItem.ContainsKey(equipment.Scancode))
+        foreach (var scancode in equipment.Scancodes)
         {
-            _scancodeToCartItem.Remove(equipment.Scancode);
-        }
-        else
-        {
-            _scancodeToCartItem.Add(equipment.Scancode, new CartItem(CartItemType.Take, equipment));
+            if (_scancodeToCartItem.ContainsKey(scancode))
+            {
+                _scancodeToCartItem.Remove(scancode);
+                break;
+            }
+            else
+            {
+                _scancodeToCartItem.Add(scancode, new CartItem(CartItemType.Take, equipment));
+                break;
+            }
         }
 
         await OnCartChanged.InvokeAllAsync(this).ConfigureAwait(false);

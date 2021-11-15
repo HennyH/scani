@@ -22,7 +22,7 @@
                 {
                     @if (IsEquipmentAvailableForTaking(equipment))
                     {
-                        <li @key="@equipment.Scancode">
+                        <li @key="@equipment.DefaultScancode">
                             <EquipmentCard Equipment="@equipment" ActionName="Take" OnAction="e => _cart.ToggleTakeAsync(e)" />
                         </li>
                     }
@@ -43,7 +43,7 @@
             <ul>
                 @foreach (var equipment in _cart.Takes)
                 {
-                    <li @key="@equipment.Scancode">
+                    <li @key="@equipment.DefaultScancode">
                         <EquipmentCard Equipment="@equipment" ActionName="Remove" OnAction="e => _cart.ToggleTakeAsync(e)" />
                     </li>
                 }
@@ -55,7 +55,7 @@
             <ul>
                 @foreach (var equipment in _cart.SelfReturns)
                 {
-                    <li @key="@equipment.Scancode">
+                    <li @key="@equipment.DefaultScancode">
                         <EquipmentCard Equipment="@equipment" ActionName="Remove" OnAction="e => _cart.ToggleSelfReturnAsync(e)" />
                     </li>
                 }
@@ -67,7 +67,7 @@
             <ul>
                 @foreach (var equipment in _cart.DelegatedReturns)
                 {
-                    <li @key="@equipment.Scancode">
+                    <li @key="@equipment.DefaultScancode">
                         <EquipmentCard Equipment="@equipment" ActionName="Remove" OnAction="e => _cart.ToggleDelegatedReturnAsync(e)" />
                     </li>
                 }
@@ -91,7 +91,7 @@
                 {
                     @if (!IsEquipmentBeingReturned(equipment))
                     {
-                        <li @key="@equipment.Scancode">
+                        <li @key="@equipment.DefaultScancode">
                             <EquipmentCard Equipment="@equipment" />
                         </li>
                     }
@@ -121,15 +121,15 @@
         _allEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.Equipment));
         _allActiveLoans = await KioskState.ReadStateAsync(s => Task.FromResult(s.ActiveLoans));
         _unloanedEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.UnloanedEquipment));
-        _myLoanedEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.EquipmentLoanedToUser(ActiveUserState.User!.Scancode)));
+        _myLoanedEquipment = await KioskState.ReadStateAsync(s => Task.FromResult(s.EquipmentLoanedToUser(ActiveUserState.User!.Scancodes)));
 
         _cart.OnCartChanged += HandleCartChangedAsync;
     }
 
     protected bool IsEquipmentAvailableForTaking(EquipmentRow equipment)
     {
-        return _unloanedEquipment?.Any(e => e.Scancode == equipment.Scancode) == true
-            && !_cart.ScancodesInCart.Contains(equipment.Scancode);
+        return _unloanedEquipment?.Any(e => equipment.Scancodes.Any(sc => e.HasScancode(sc))) == true
+            && !_cart.ScancodesInCart.Contains(equipment.DefaultScancode);
     }
 
     protected bool IsEquipmentBeingReturned(EquipmentRow equipment)
@@ -145,15 +145,15 @@
         {
             return;
         }
-        else if (_unloanedEquipment?.Any(e => e.Scancode == equipment.Scancode) == true)
+        else if (_unloanedEquipment?.Any(e => equipment.Scancodes.Any(sc => e.HasScancode(sc))) == true)
         {
             await _cart.ToggleTakeAsync(equipment);
         }
-        else if (_myLoanedEquipment?.Any(e => e.Scancode == equipment.Scancode) == true)
+        else if (_myLoanedEquipment?.Any(e => equipment.Scancodes.Any(sc => e.HasScancode(sc))) == true)
         {
             await _cart.ToggleSelfReturnAsync(equipment);
         }
-        else if (_allActiveLoans?.Any(e => e.EquipmentScancode == equipment.Scancode) == true)
+        else if (_allActiveLoans?.Any(l => equipment.HasScancode(l.EquipmentScancode)) == true)
         {
             await _cart.ToggleDelegatedReturnAsync(equipment);
         }

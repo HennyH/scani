@@ -87,13 +87,13 @@
         {
             if (_cart.Returns.Any())
             {
-                var returnScancodes = _cart.Returns.Select(e => e.Scancode).ToHashSet();
+                var returnScancodes = _cart.Returns.Select(e => e.DefaultScancode).ToHashSet();
                 await ReturnEquipment(returnScancodes, now);
             }
 
             if (_cart.Takes.Any())
             {
-                var takeScancdodes = _cart.Takes.Select(e => e.Scancode).ToList();
+                var takeScancdodes = _cart.Takes.Select(e => e.DefaultScancode).ToList();
                 await TakeEquipment(takeScancdodes, now);
             }
 
@@ -135,7 +135,7 @@
             if (state.LoanSheet == null || ActiveUserState.User == null) return;
 
             var newLoans = equipmentScancodes
-                .Select(scancode => new LoanRow(ActiveUserState.User.Scancode, scancode, takeDate ?? now, state.LoanSheet))
+                .Select(scancode => new LoanRow(ActiveUserState.User.DefaultScancode, scancode, takeDate ?? now, state.LoanSheet))
                 .ToList();
 
             foreach (var loan in newLoans)

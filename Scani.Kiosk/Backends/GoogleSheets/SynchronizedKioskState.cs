@@ -24,28 +24,28 @@ namespace Scani.Kiosk.Backends.GoogleSheet
             Equipment
             ?.Where(e =>
                 LoanSheet != null
-                && !LoanSheet.Rows.Any(l => !l.ReturnedDate.HasValue && l.EquipmentScancode == e.Scancode))
+                && !LoanSheet.Rows.Any(l => !l.ReturnedDate.HasValue && e.HasScancode(l.EquipmentScancode)))
             ?.ToList()
             ?? new List<EquipmentRow>();
 
-        public IEnumerable<EquipmentRow> EquipmentLoanedToUser(string userScancode) =>
+        public IEnumerable<EquipmentRow> EquipmentLoanedToUser(ICollection<string> userScancodes) =>
             Equipment
             ?.Where(e =>
                 LoanSheet != null
                 && LoanSheet.Rows.Any(l =>
                     !l.ReturnedDate.HasValue
-                    && l.EquipmentScancode == e.Scancode
-                    && l.StudentScancode == userScancode))
+                    && e.HasScancode(l.EquipmentScancode)
+                    && userScancodes.Contains(l.StudentScancode)))
             ?.ToList()
             ?? new List<EquipmentRow>();
 
         public EquipmentRow? EquipmentWithScancode(string equipmentScancode) => 
             Equipment
-            ?.SingleOrDefault(e => e.Scancode == equipmentScancode);
+            ?.SingleOrDefault(e => e.HasScancode(equipmentScancode));
 
         public UserRow? StudentWithScancode(string studentScancode) =>
             Students
-            ?.SingleOrDefault(s => s.Email == studentScancode || s.Scancode == studentScancode);
+            ?.SingleOrDefault(s => s.Email == studentScancode || s.HasScancode(studentScancode));
 
         public IEnumerable<LoanRow> ActiveLoansForUser(string userScancode) =>
             Loans
