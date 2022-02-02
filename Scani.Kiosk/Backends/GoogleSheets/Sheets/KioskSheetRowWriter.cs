@@ -1,6 +1,5 @@
 ﻿using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
-using Scani.Kiosk.Backends.GoogleSheet;
 using Scani.Kiosk.Backends.GoogleSheets.Sheets.Models;
 using Scani.Kiosk.Helpers;
 using System.ComponentModel.DataAnnotations;
@@ -38,8 +37,8 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                         })
                         .ToList()
                 }, sheetId);
-                return await request.ExecuteAsync().ConfigureAwait(false);
-            }).ConfigureAwait(false);
+                return await request.ExecuteAsync();
+            });
 
             var results = new List<KioskSheetWriteResult<T>>();
             foreach (var row in rows)
@@ -60,26 +59,6 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
             }
 
             return results;
-        }
-
-        /// <summary>
-        /// Converts a 1 based column number into an excel column name.
-        /// </summary>
-        /// <remarks>
-        /// Taken from https://stackoverflow.com/a/182924
-        /// </remarks>
-        private static string GetExcelColumnName(int columnNumber)
-        {
-            string columnName = "";
-
-            while (columnNumber > 0)
-            {
-                int modulo = (columnNumber - 1) % 26;
-                columnName = Convert.ToChar('A' + modulo) + columnName;
-                columnNumber = (columnNumber - modulo) / 26;
-            }
-
-            return columnName;
         }
     }
 }

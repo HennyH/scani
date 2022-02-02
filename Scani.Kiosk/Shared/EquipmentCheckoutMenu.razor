@@ -1,6 +1,6 @@
 ﻿@implements IDisposable
 @inject SynchronizedKioskState KioskState
-@inject Scani.Kiosk.Backends.GoogleSheet.KioskSheetSynchronizer SheetSynchronizer
+@inject KioskSheetSynchronizer SheetSynchronizer
 
 <form @onclick="HandleManualScancodeFormSubmit" @onclick:preventDefault @onclick:stopPropagation>
     <label>Scancode: </label>
@@ -22,7 +22,7 @@
                 {
                     @if (IsEquipmentAvailableForTaking(equipment))
                     {
-                        <li @key="@equipment.DefaultScancode">
+                        <li @key="@equipment.PrimaryScancode">
                             <EquipmentCard Equipment="@equipment" ActionName="Take" OnAction="e => _cart.ToggleTakeAsync(e)" />
                         </li>
                     }
@@ -43,7 +43,7 @@
             <ul>
                 @foreach (var equipment in _cart.Takes)
                 {
-                    <li @key="@equipment.DefaultScancode">
+                    <li @key="@equipment.PrimaryScancode">
                         <EquipmentCard Equipment="@equipment" ActionName="Remove" OnAction="e => _cart.ToggleTakeAsync(e)" />
                     </li>
                 }
@@ -55,7 +55,7 @@
             <ul>
                 @foreach (var equipment in _cart.SelfReturns)
                 {
-                    <li @key="@equipment.DefaultScancode">
+                    <li @key="@equipment.PrimaryScancode">
                         <EquipmentCard Equipment="@equipment" ActionName="Remove" OnAction="e => _cart.ToggleSelfReturnAsync(e)" />
                     </li>
                 }
@@ -67,7 +67,7 @@
             <ul>
                 @foreach (var equipment in _cart.DelegatedReturns)
                 {
-                    <li @key="@equipment.DefaultScancode">
+                    <li @key="@equipment.PrimaryScancode">
                         <EquipmentCard Equipment="@equipment" ActionName="Remove" OnAction="e => _cart.ToggleDelegatedReturnAsync(e)" />
                     </li>
                 }
@@ -91,7 +91,7 @@
                 {
                     @if (!IsEquipmentBeingReturned(equipment))
                     {
-                        <li @key="@equipment.DefaultScancode">
+                        <li @key="@equipment.PrimaryScancode">
                             <EquipmentCard Equipment="@equipment" />
                         </li>
                     }
@@ -129,7 +129,7 @@
     protected bool IsEquipmentAvailableForTaking(EquipmentRow equipment)
     {
         return _unloanedEquipment?.Any(e => equipment.Scancodes.Any(sc => e.HasScancode(sc))) == true
-            && !_cart.ScancodesInCart.Contains(equipment.DefaultScancode);
+            && !_cart.ScancodesInCart.Contains(equipment.PrimaryScancode);
     }
 
     protected bool IsEquipmentBeingReturned(EquipmentRow equipment)

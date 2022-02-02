@@ -30,6 +30,11 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
             var dataHeaderRowNumber = numberOfHeaderRows;
 
             var expectedColumns = SheetColumnAttribute.GetExpectedColumns<T>();
+            if (!expectedColumns.Any())
+            {
+                throw new ArgumentException($"The type {typeof(T)} has no columns defined");
+            }
+
             var maxExpectedColumnNumber = expectedColumns.Max(ec => ec.ColumnNumber);
             var result = new KioskSheetReadResult<T>(
                 sheetName: sheetName,
@@ -133,8 +138,8 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
 
                 /* Finally it is time to read the data rows into objects */
                 ulong? firstGeneratedScancode = null;
-                HashSet<string> generatedScancodes = new HashSet<string>();
-                HashSet<string> scancodes = new HashSet<string>();
+                HashSet<string> generatedScancodes = new();
+                HashSet<string> scancodes = new();
                 for (int dataRowNumber = dataHeaderRowNumber + 1; dataRowNumber <= cells.Count; dataRowNumber++)
                 {
                     bool isValidRow = true;
@@ -282,7 +287,19 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets
                 }
             }
 
-            result.Ok = true;
+            if (result.Ok)
+            {
+                logger.LogInformation("Successfully parsed rows from sheet '{}'", sheetName);
+            }
+            else
+            {
+                logger.LogError("Failed to parse rows from sheet '{}' ({} errors)", sheetName, result.Errors.Count);
+                foreach (var (error, number) in result.Errors.Select((e, i) => (e.Message, i)))
+                {
+                    logger.LogError("Sheet '{}' parser error {}: {}", sheetName, number, error);
+                }
+            }
+
             return result;
         }
 

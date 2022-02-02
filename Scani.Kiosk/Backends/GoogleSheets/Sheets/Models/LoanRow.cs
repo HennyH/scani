@@ -10,11 +10,11 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         { }
 
-        public LoanRow(string studentScancode, string equipmentScancode, DateTime loanDate, KioskSheetReadResult<LoanRow> loanSheet)
+        public LoanRow(string userScancode, string equipmentScancode, DateTime loanDate, KioskSheetReadResult<LoanRow> loanSheet)
         {
             ArgumentNullException.ThrowIfNull(loanSheet);
             this.IdText = Guid.NewGuid().ToString();
-            this.StudentScancode = studentScancode;
+            this.UserScancode = userScancode;
             this.EquipmentScancode = equipmentScancode;
             this.LoanedDate = loanDate;
             this.Range = loanSheet.DataRowNumberToRange(loanSheet.GetNextRowNumber());
@@ -25,8 +25,8 @@ namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
 
         public Guid Id => Guid.Parse(IdText);
 
-        [SheetColumn("Student Scancode", ColumnNumber: 2, IsRequired = true)]
-        public string StudentScancode { get; set; }
+        [SheetColumn("User Scancode", ColumnNumber: 2, IsRequired = true)]
+        public string UserScancode { get; set; }
 
         [SheetColumn("Equipment Scancode", ColumnNumber: 3, IsRequired = true)]
         public string EquipmentScancode { get; set; }

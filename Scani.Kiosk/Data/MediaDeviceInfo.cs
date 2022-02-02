@@ -1,18 +1,3 @@
-﻿namespace Scani.Kiosk.Data
-{
-    public class MediaDeviceInfo
-    {
-        public MediaDeviceInfo(string deviceId, string groupId, string kind, string label)
-        {
-            this.DeviceId = deviceId;
-            this.GroupId = groupId;
-            this.Kind = kind;
-            this.Label = label;
-        }
+﻿namespace Scani.Kiosk.Data;
 
-        public string DeviceId { get; set; }
-        public string GroupId { get; set; }
-        public string Kind { get; set; }
-        public string Label { get; set; }
-    }
-}
+public record MediaDeviceInfo(string DeviceId, string GroupId, string Kind, string Label);

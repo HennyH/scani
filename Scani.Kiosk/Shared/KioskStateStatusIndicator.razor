@@ -84,7 +84,7 @@
         await KioskState.ReadStateAsync(state =>
         {
             _loanErrors = state.LoanSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
-            _studentErrors = state.StudentsSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
+            _studentErrors = state.UsersSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
             _equipmentErrors = state.EquipmentSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
             _lastUpdated = state.LastModified;
             return Task.CompletedTask;
@@ -97,7 +97,7 @@
         await KioskState.ReadStateAsync(async state =>
         {
             _loanErrors = state.LoanSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
-            _studentErrors = state.StudentsSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
+            _studentErrors = state.UsersSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
             _equipmentErrors = state.EquipmentSheet?.Errors?.ToList() ?? new List<KioskSheetReadError>();
             _lastUpdated = state.LastModified;
             await InvokeAsync(StateHasChanged);

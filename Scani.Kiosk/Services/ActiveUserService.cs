@@ -8,7 +8,7 @@ public record ActiveUserState
     public ActiveUserState(UserRow userInfo, TimeZoneInfo timeZone)
     {
         ArgumentNullException.ThrowIfNull(userInfo);
-        this.IsAdmin = userInfo.IsAdmin;
+        this.IsAdmin = userInfo.IsAdminUser;
         this.User = userInfo;
         this.TimeZone = timeZone;
     }
@@ -40,12 +40,12 @@ public class ActiveUserService
     public async Task SetActiveUserAsync(UserRow userInfo)
     {
         ActiveUserState = new ActiveUserState(userInfo, _userTimeZone);
-        await ActiveUserChanged.InvokeAllAsync(ActiveUserState).ConfigureAwait(false);
+        await ActiveUserChanged.InvokeAllAsync(ActiveUserState);
     }
 
     public async Task LogoutActiveUserAsync()
     {
         ActiveUserState = new ActiveUserState();
-        await ActiveUserChanged.InvokeAllAsync(ActiveUserState).ConfigureAwait(false);
+        await ActiveUserChanged.InvokeAllAsync(ActiveUserState);
     }
 }

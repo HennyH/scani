@@ -46,7 +46,7 @@
 
     private async Task TryLoginWithScancode(string scancode)
     {
-        var user = await KioskState.ReadStateAsync(s => Task.FromResult(s.StudentWithScancode(scancode)));
+        var user = await KioskState.ReadStateAsync(s => Task.FromResult(s.UserWithScancode(scancode)));
 
         if (user == null)
         {

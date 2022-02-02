@@ -4,6 +4,7 @@
 @inject IConfiguration Configuration
 @inject NavigationManager NavigationManager
 @inject ThrottledKioskSheetAccessor SheetsAccessor
+@inject KioskSheetSynchronizer KioskSheetSynchronizer
 @inject ActiveUserService ActiveUserService
 @inject ILogger<Checkout> Logger
 
@@ -87,13 +88,13 @@
         {
             if (_cart.Returns.Any())
             {
-                var returnScancodes = _cart.Returns.Select(e => e.DefaultScancode).ToHashSet();
+                var returnScancodes = _cart.Returns.Select(e => e.PrimaryScancode).ToHashSet();
                 await ReturnEquipment(returnScancodes, now);
             }
 
             if (_cart.Takes.Any())
             {
-                var takeScancdodes = _cart.Takes.Select(e => e.DefaultScancode).ToList();
+                var takeScancdodes = _cart.Takes.Select(e => e.PrimaryScancode).ToList();
                 await TakeEquipment(takeScancdodes, now);
             }
 
@@ -123,6 +124,8 @@
 
             await KioskSheetRowWriter.UpdateRowsAsync(_sheetId!, "Loans", SheetsAccessor, associatedLoans);
         });
+       
+        await KioskSheetSynchronizer.PerformSynchronizationAsync();
     }
 
     private async Task TakeEquipment(IReadOnlyCollection<string> equipmentScancodes, DateTime? takeDate = null)
@@ -135,7 +138,7 @@
             if (state.LoanSheet == null || ActiveUserState.User == null) return;
 
             var newLoans = equipmentScancodes
-                .Select(scancode => new LoanRow(ActiveUserState.User.DefaultScancode, scancode, takeDate ?? now, state.LoanSheet))
+                .Select(scancode => new LoanRow(ActiveUserState.User.PrimaryScancode, scancode, takeDate ?? now, state.LoanSheet))
                 .ToList();
 
             foreach (var loan in newLoans)
@@ -145,6 +148,8 @@
 
             await KioskSheetRowWriter.UpdateRowsAsync(_sheetId!, "Loans", SheetsAccessor, newLoans);
         });
+
+        await KioskSheetSynchronizer.PerformSynchronizationAsync();
     }
 
     public void Dispose()

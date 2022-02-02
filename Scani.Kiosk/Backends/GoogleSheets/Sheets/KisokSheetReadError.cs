@@ -15,205 +15,47 @@
         DataRowExpectedValueMissing
     }
 
-    public abstract class KioskSheetReadError
-    {
-        public string SheetName { get; }
-        public KioskSheetReadErrorType ErrorType { get; }
-        public string Message { get; }
+    public abstract record KioskSheetReadError(KioskSheetReadErrorType ErrorType, string SheetName, string Message);
 
-        protected KioskSheetReadError(KioskSheetReadErrorType errorType, string sheetName, string message)
-        {
-            this.SheetName = sheetName;
-            this.ErrorType = errorType;
-            this.Message = message;
-        }
-    }
+    public record MissingFlexFields(string SheetName, int Row, int StartCol)
+        : KioskSheetReadError(KioskSheetReadErrorType.MissingFlexFields, SheetName, $"Expected flex fields in sheet {SheetName} but was unable to locate them on row {Row} starting at column {StartCol} in spreadsheet {SheetName}");
 
-    public class MissingFlexFields : KioskSheetReadError
-    {
-        public int RowNumber { get; init; }
-        public int StartColumnNumber { get; init; }
-        public MissingFlexFields(string sheetName, int row, int startCol)
-            : base(KioskSheetReadErrorType.MissingFlexFields,
-                   sheetName,
-                   $"Expected flex fields in sheet {sheetName} but was unable to locate them on row {row} starting at column {startCol} in spreadsheet {sheetName}")
-        {
-            this.RowNumber = row;
-            this.StartColumnNumber = startCol;
-        }
-    }
+    public record TooManyFlexFields(string SheetName, int FlexFieldLimit, int FoundFlexFieldCount)
+        : KioskSheetReadError(KioskSheetReadErrorType.TooManyFlexFields, SheetName, $"The sheet {SheetName} has {FoundFlexFieldCount} flex fields and thus exceeded the flex field limit of {FlexFieldLimit} fields");
 
-    public class TooManyFlexFields : KioskSheetReadError
-    {
-        public TooManyFlexFields(string sheetName, int flexFieldLimit, int foundFlexFieldCount)
-            : base(KioskSheetReadErrorType.TooManyFlexFields,
-                   sheetName,
-                   $"The sheet {sheetName} has {foundFlexFieldCount} flex fields and thus exceeded the flex field limit of {flexFieldLimit} fields")
-        { }
-    }
+    public record MissingRequiredDataColumn(string SheetName, string ColumnName, int Row, int Column)
+        : KioskSheetReadError(KioskSheetReadErrorType.MissingRequiredDataColumn, SheetName, $"The sheet {SheetName} is missing the required colum {ColumnName} on row {Row} and column {Column}");
 
-    public class MissingRequiredDataColumn : KioskSheetReadError
-    {
-        public string Name { get; set; }
-        public int RowNumber { get; init; }
-        public int ColumnNumber { get; init; }
-        public MissingRequiredDataColumn(string sheetName, string columnName, int row, int column)
-            : base(KioskSheetReadErrorType.MissingRequiredDataColumn,
-                   sheetName,
-                   $"The sheet {sheetName} is missing the required colum {columnName} on row {row} and column {column}")
-        {
-            this.Name = columnName;
-            this.ColumnNumber = column;
-            this.RowNumber = row;
-        }
-    }
+    public record MissingExpectedDataColumn(string SheetName, string ColumnName, int Row, int Column)
+        : KioskSheetReadError(KioskSheetReadErrorType.MissingRequiredDataColumn, SheetName, $"The sheet {SheetName} is missing the colum {ColumnName} on row {Row} and column {Column}");
 
-    public class MissingExpectedDataColumn : KioskSheetReadError
-    {
-        public string Name { get; set; }
-        public int RowNumber { get; init; }
-        public int ColumnNumber { get; init; }
-        public MissingExpectedDataColumn(string sheetName, string columnName, int row, int column)
-            : base(KioskSheetReadErrorType.MissingRequiredDataColumn,
-                   sheetName,
-                   $"The sheet {sheetName} is missing the colum {columnName} on row {row} and column {column}")
-        {
-            this.Name = columnName;
-            this.ColumnNumber = column;
-            this.RowNumber = row;
-        }
-    }
+    public record NonSequentialGeneratedScancodes(string SheetName, int Row, ulong ExpectedScancode, ulong ActualScancode)
+        : KioskSheetReadError(KioskSheetReadErrorType.NonSequentialGeneratedScancode, SheetName, $"The sheet {SheetName} on row {Row} violated the expectation of sequential generated scancodes, expected row {Row} to have a generated scancode of {ExpectedScancode} but found {ActualScancode}");
 
-    public class NonSequentialGeneratedScancodes : KioskSheetReadError
-    {
-        public ulong ExpectedScancode { get; init; }
-        public ulong ActualScancode { get; set; }
-        public int RowNumber { get; init; }
+    public record MissingExpectedHeaderRows(string SheetName, int ExpectedNumberOfHeaderRows, int FoundHeaderRows)
+        : KioskSheetReadError(KioskSheetReadErrorType.MissingExpectedHeaderRows, SheetName, $"Expected the sheet {SheetName} to have {ExpectedNumberOfHeaderRows} header rows but found {FoundHeaderRows}");
 
-        public NonSequentialGeneratedScancodes(string sheetName, int row, ulong expectedScancode, ulong actualScancode)
-            : base(KioskSheetReadErrorType.NonSequentialGeneratedScancode,
-                   sheetName,
-                   $"The sheet {sheetName} on row {row} violated the expectation of sequential generated scancodes, expected row {row} to have a generated scancode of {expectedScancode} but found {actualScancode}")
-        { }
-    }
+    public record EmptyFlexFieldHeader(string SheetName, int EmptyFlexHeaderRowNumber, int EmptyFlexHeaderColumNumber)
+        : KioskSheetReadError(KioskSheetReadErrorType.EmptyFlexFieldHeader, SheetName, $"The sheet {SheetName} had an empty flex header on row {EmptyFlexHeaderRowNumber} and column {EmptyFlexHeaderColumNumber} which results in ambiguous parsing and is thus disallowed");
 
-    public class MissingExpectedHeaderRows : KioskSheetReadError
-    {
-        public int ExpectedNumberOfHeaderRows { get; }
+    public record UnrecognisedDataColumn(string SheetName, string ColumnName, int ColumnNumber)
+        : KioskSheetReadError(KioskSheetReadErrorType.UnrecognisedDataColumn, SheetName, $"The sheet {SheetName} had an unrecognised column '{ColumnName}' in column {ColumnNumber}");
 
-        public MissingExpectedHeaderRows(string sheetName, int expectedNumberOfHeaderRows, int foundHeaderRows)
-            : base(KioskSheetReadErrorType.MissingExpectedHeaderRows,
-                   sheetName,
-                   $"Expected the sheet {sheetName} to have {expectedNumberOfHeaderRows} header rows but found {foundHeaderRows}")
-        { }
-    }
+    public record DataRowMissingValues(string SheetName, int RowNumber, int ExpectedColumnCount, int ActualColumnCount)
+        : KioskSheetReadError(KioskSheetReadErrorType.DataRowMissingValues, SheetName, $"The sheet {SheetName}'s data row on row {RowNumber} was expected to contain {ExpectedColumnCount} values but contained {ActualColumnCount}");
 
-    public class EmptyFlexFieldHeader : KioskSheetReadError
-    {
-        public int RowNumber { get; init; }
-        public int ColumnNumber { get; init; }
-        public EmptyFlexFieldHeader(string sheetName, int emptyFlexHeaderRowNumber, int emptyFlexHeaderColumNumber)
-            : base(KioskSheetReadErrorType.EmptyFlexFieldHeader,
-                   sheetName,
-                   $"The sheet {sheetName} had an empty flex header on row {emptyFlexHeaderRowNumber} and column {emptyFlexHeaderColumNumber} which results in ambiguous parsing and is thus disallowed")
-        {
-            this.RowNumber = emptyFlexHeaderRowNumber;
-            this.ColumnNumber = emptyFlexHeaderColumNumber;
-        }
-    }
+    public record DataRowExpectedValueMissing(string SheetName, string ColumnName, int RowNumber, int ColumnNumber)
+        : KioskSheetReadError(KioskSheetReadErrorType.DataRowExpectedValueMissing, SheetName, $"The sheet {SheetName} is missing a value for column '{ColumnName}' on row {RowNumber} at column {ColumnNumber}");
 
-    public class UnrecognisedDataColumn : KioskSheetReadError
-    {
-        public string ColumnName { get; init; }
-        public int ColumnNumber { get; init; }
+    public record InvalidGeneratedScancode(string SheetName, string GeneratedScancode, int RowNumber)
+        : KioskSheetReadError(KioskSheetReadErrorType.InvalidGeneratedScancode, SheetName, $"The sheet {SheetName} has an invalid generated scancode {GeneratedScancode} on row {RowNumber} - generated scancodes must be numeric and in ascending order");
 
-        public UnrecognisedDataColumn(string sheetName, string columnName, int columnNumber)
-            : base(KioskSheetReadErrorType.UnrecognisedDataColumn,
-                   sheetName,
-                   $"The sheet {sheetName} had an unrecognised column '{columnName}' in column {columnNumber}")
-        {
-            this.ColumnName = columnName;
-            this.ColumnNumber = columnNumber;
-        }
-    }
+    public record DuplicateGeneratedScancode(string SheetName, string GeneratedScancode, int RowNumber)
+        : KioskSheetReadError(KioskSheetReadErrorType.InvalidGeneratedScancode, SheetName, $"The sheet {SheetName} has a generated scancode {GeneratedScancode} on row {RowNumber} which is already in use");
 
-    public class DataRowMissingValues : KioskSheetReadError
-    {
-        public int RowNumber { get; init; }
-        public int ExpectedColumnCount { get; init; }
-        public int ActualColumnCount { get; init; }
+    public record DuplicateCustomScancode(string SheetName, string CustomScancode, int RowNumber)
+        : KioskSheetReadError(KioskSheetReadErrorType.InvalidGeneratedScancode, SheetName, $"The sheet {SheetName} has a custom scancode {CustomScancode} on row {RowNumber} which is already in use");
 
-        public DataRowMissingValues(string sheetName, int rowNumber, int expectedColumnCount, int actualColumnCount)
-            : base(KioskSheetReadErrorType.DataRowMissingValues,
-                   sheetName,
-                   $"The sheet {sheetName}'s data row on row {rowNumber} was expected to contain {expectedColumnCount} values but contained {actualColumnCount}")
-        {
-            this.RowNumber = rowNumber;
-            this.ExpectedColumnCount = expectedColumnCount;
-            this.ActualColumnCount = actualColumnCount;
-        }
-    }
-
-    public class DataRowExpectedValueMissing : KioskSheetReadError
-    {
-        public string ColumnName { get; init; }
-        public int RowNumber { get; init; }
-        public int ColumnNumber { get; init; }
-        
-        public DataRowExpectedValueMissing(string sheetName, string columnName, int rowNumber, int columnNumber)
-            : base(KioskSheetReadErrorType.DataRowExpectedValueMissing,
-                   sheetName,
-                   $"The sheet {sheetName} is missing a value for column '{columnName}' on row {rowNumber} at column {columnNumber}")
-        {
-            this.ColumnName = columnName;
-            this.RowNumber = rowNumber;
-            this.ColumnNumber = columnNumber;
-        }
-    }
-
-    public class DataRowInvalidValue : KioskSheetReadError
-    {
-        public string ColumnName { get; init; }
-        public int RowNumber { get; init; }
-        public int ColumnNumber { get; init; }
-        public string Value { get; set; }
-
-        public DataRowInvalidValue(string sheetName, string columnName, string value, int rowNumber, int columnNumber)
-            : base(KioskSheetReadErrorType.DataRowExpectedValueMissing,
-                   sheetName,
-                   $"The sheet {sheetName} was not able to understand the value in column '{columnName}' on row {rowNumber} at column {columnNumber}, that value was {value}")
-        {
-            this.ColumnName = columnName;
-            this.RowNumber = rowNumber;
-            this.ColumnNumber = columnNumber;
-            this.Value = value;
-        }
-    }
-
-    public class InvalidGeneratedScancode : KioskSheetReadError
-    {
-        public InvalidGeneratedScancode(string sheetName, string generatedScancode, int rowNumber)
-            : base(KioskSheetReadErrorType.InvalidGeneratedScancode,
-                   sheetName,
-                   $"The sheet {sheetName} has an invalid generated scancode {generatedScancode} on row {rowNumber} - generated scancodes must be numeric and in ascending order")
-        { }
-    }
-
-    public class DuplicateGeneratedScancode : KioskSheetReadError
-    {
-        public DuplicateGeneratedScancode(string sheetName, string generatedScancode, int rowNumber)
-            : base(KioskSheetReadErrorType.InvalidGeneratedScancode,
-                   sheetName,
-                   $"The sheet {sheetName} has a generated scancode {generatedScancode} on row {rowNumber} which is already in use")
-        { }
-    }
-
-    public class DuplicateCustomScancode : KioskSheetReadError
-    {
-        public DuplicateCustomScancode(string sheetName, string customScancode, int rowNumber)
-            : base(KioskSheetReadErrorType.InvalidGeneratedScancode,
-                   sheetName,
-                   $"The sheet {sheetName} has a custom scancode {customScancode} on row {rowNumber} which is already in use")
-        { }
-    }
+    public record DataRowInvalidValue(string SheetName, string ColumnName, string Value, int RowNumber, int ColumnNumber)
+        : KioskSheetReadError(KioskSheetReadErrorType.DataRowExpectedValueMissing, SheetName, $"The sheet {SheetName} was not able to understand the value in column '{ColumnName}' on row {RowNumber} at column {ColumnNumber}, that value was {Value}");
 }

@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.HttpOverrides;
-using Scani.Kiosk.Backends.GoogleSheet;
+using Scani.Kiosk.Backends.GoogleSheets;
 using Scani.Kiosk.Services;
 
 #pragma warning disable CA1812

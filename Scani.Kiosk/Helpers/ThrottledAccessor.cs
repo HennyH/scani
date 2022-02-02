@@ -1,5 +1,4 @@
 ﻿using Microsoft.VisualStudio.Threading;
-using System.Runtime.CompilerServices;
 
 namespace Scani.Kiosk.Helpers
 {
@@ -28,9 +27,9 @@ namespace Scani.Kiosk.Helpers
 
             await AccessAsync(async (r) =>
             {
-                await action(r).ConfigureAwait(false);
+                await action(r);
                 return Task.CompletedTask;
-            }, interval).ConfigureAwait(false);
+            }, interval);
         }
 
         public virtual async Task<TResult> AccessAsync<TResult>(Func<T, Task<TResult>> action, TimeSpan? interval = null)
@@ -54,12 +53,12 @@ namespace Scani.Kiosk.Helpers
                 {
                     var usages = Interlocked.Increment(ref _periodUsages);
                     _logger.LogInformation("Throttled accessor allow access resulting in period usage total of {}", usages);
-                    return await action(_resource).ConfigureAwait(false);
+                    return await action(_resource);
                 }
                 else
                 {
                     _logger.LogWarning("Throttled accessor period reached limit usage of {} every {}, duration of current usage period is {}", _limit, _limitPeriod, usagePeriodDuration);
-                    await Task.Delay(intervalMilliseconds).ConfigureAwait(false);
+                    await Task.Delay(intervalMilliseconds);
                 }
             }
         }

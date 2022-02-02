@@ -1,7 +1,6 @@
 ﻿using Scani.Kiosk.Backends.GoogleSheets.Sheets.Models;
 using Scani.Kiosk.Helpers;
 using System.Diagnostics.CodeAnalysis;
-using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.Text;
 
@@ -93,7 +92,7 @@ public class EquipmentCheckoutCart
             }
         }
 
-        await OnCartChanged.InvokeAllAsync(this).ConfigureAwait(false);
+        await OnCartChanged.InvokeAllAsync(this);
     }
 
     public async Task ToggleDelegatedReturnAsync(EquipmentRow equipment)
@@ -114,7 +113,7 @@ public class EquipmentCheckoutCart
             }
         }
 
-        await OnCartChanged.InvokeAllAsync(this).ConfigureAwait(false);
+        await OnCartChanged.InvokeAllAsync(this);
     }
 
     public async Task ToggleTakeAsync(EquipmentRow equipment)
@@ -135,6 +134,6 @@ public class EquipmentCheckoutCart
             }
         }
 
-        await OnCartChanged.InvokeAllAsync(this).ConfigureAwait(false);
+        await OnCartChanged.InvokeAllAsync(this);
     }
 }

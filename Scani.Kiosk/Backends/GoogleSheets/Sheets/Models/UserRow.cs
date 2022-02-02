@@ -1,4 +1,7 @@
-﻿namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Scani.Kiosk.Backends.GoogleSheets.Sheets.Models
 {
     [GoogleSheet("Users", HeaderCount: 2)]
     public class UserRow : ISheetRow, IHaveScancodes, IHaveFlexFields
@@ -34,36 +37,27 @@
         public string GeneratedScancode { get; set; }
 
         [SheetColumn("Deactive User? (Y/N - Default N)", ColumnNumber: 6)]
-        public string? IsDeactivedUserText { get; set; }
+        public string? DeactiveUserText { get; set; }
 
         [SheetColumn("Is Admin? (Y/N - Default N)", ColumnNumber: 7)]
         public string? IsAdminText { get; set; }
 
-        public bool IsAdmin => CellTextValue.IsTruthy(IsAdminText);
-
-        public bool IsDeactivedUser => CellTextValue.IsTruthy(IsDeactivedUserText);
-
-        public bool IsActiveUser => !IsDeactivedUser;
-
-        public string Range { get; set; }
-
         [FlexFieldSheetColumn(RowNumber: 2, ColumnNumber: 8)]
         public IDictionary<string, string?> FlexFields { get; } = new Dictionary<string, string?>();
 
-        public string DefaultScancode => CustomScancode ?? GeneratedScancode;
-        public ICollection<string> Scancodes
-        {
-            get
-            {
-                var scancodes = new List<string> { GeneratedScancode };
-                if (!string.IsNullOrWhiteSpace(CustomScancode))
-                {
-                    scancodes.Add(CustomScancode);
-                }
-                return scancodes;
-            }
-        }
+        public bool IsActiveUser => string.IsNullOrWhiteSpace(DeactiveUserText) || !(DeactiveUserText == "Y" || DeactiveUserText == "Yes" || DeactiveUserText == "True" || DeactiveUserText == "true");
 
-        public bool HasScancode(string scancode) => Scancodes.Any(s => s.Equals(scancode, StringComparison.OrdinalIgnoreCase));
+        public bool IsAdminUser => IsAdminText == "Y" || IsAdminText == "Yes" || IsAdminText == "True" || IsAdminText == "true";
+
+        public string PrimaryScancode => string.IsNullOrWhiteSpace(CustomScancode) ? GeneratedScancode : CustomScancode;
+
+        public HashSet<string> Scancodes => new[] { Email, CustomScancode, GeneratedScancode }
+            .Where(sc => !string.IsNullOrWhiteSpace(sc))
+            .Select(sc => sc!)
+            .ToHashSet();
+
+        public bool HasScancode(string scancode) => Scancodes.Contains(scancode);
+
+        public string Range { get; set; }
     }
 }
